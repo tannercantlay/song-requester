@@ -115,3 +115,22 @@ export function patchEvent(
 ): Promise<AdminEvent> {
   return request(`/api/events/${eventId}`, { method: "PATCH", body: JSON.stringify(patch) });
 }
+
+export function reorderQueue(eventId: string, order: string[]): Promise<QueueRequest[]> {
+  return request(`/api/events/${eventId}/reorder`, {
+    method: "POST",
+    body: JSON.stringify({ order }),
+  });
+}
+
+export async function blockGuest(eventId: string, requesterToken: string): Promise<void> {
+  const res = await fetch(`/api/events/${eventId}/block`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requesterToken }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, body.error ?? `Request failed (${res.status})`);
+  }
+}

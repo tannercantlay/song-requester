@@ -56,3 +56,38 @@ export async function patchEvent(
     .executeTakeFirstOrThrow();
   return updated;
 }
+
+export async function reorderQueue(eventId: string, order: string[]): Promise<void> {
+  await getEventById(eventId);
+
+  const existing = await db
+    .selectFrom("request")
+    .select("id")
+    .where("event_id", "=", eventId)
+    .where("id", "in", order)
+    .execute();
+
+  if (existing.length !== order.length) {
+    throw new HttpError(400, "One or more requests don't belong to this event");
+  }
+
+  await db.transaction().execute(async (trx) => {
+    for (const [index, requestId] of order.entries()) {
+      await trx
+        .updateTable("request")
+        .set({ queue_position: index + 1 })
+        .where("id", "=", requestId)
+        .where("event_id", "=", eventId)
+        .execute();
+    }
+  });
+}
+
+export async function blockGuest(eventId: string, requesterToken: string): Promise<void> {
+  await getEventById(eventId);
+  await db
+    .insertInto("blocked_guest")
+    .values({ event_id: eventId, requester_token: requesterToken })
+    .onConflict((oc) => oc.columns(["event_id", "requester_token"]).doNothing())
+    .execute();
+}

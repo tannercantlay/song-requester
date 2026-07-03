@@ -1,19 +1,33 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-const SSE_EVENT_NAMES = ["request.created", "request.updated", "queue.reordered", "event.updated"] as const;
+export type SseEventName = "request.created" | "request.updated" | "queue.reordered" | "event.updated";
 
-export function useSSE(url: string | null, onEvent: () => void): void {
+const SSE_EVENT_NAMES: SseEventName[] = [
+  "request.created",
+  "request.updated",
+  "queue.reordered",
+  "event.updated",
+];
+
+export function useSSE(url: string | null, onEvent: (name: SseEventName) => void): void {
+  const handlerRef = useRef(onEvent);
+  handlerRef.current = onEvent;
+
   useEffect(() => {
     if (!url) return;
 
     const source = new EventSource(url);
-    for (const name of SSE_EVENT_NAMES) {
-      source.addEventListener(name, onEvent);
-    }
+    const listeners = SSE_EVENT_NAMES.map((name) => {
+      const listener = () => handlerRef.current(name);
+      source.addEventListener(name, listener);
+      return { name, listener };
+    });
 
     return () => {
+      for (const { name, listener } of listeners) {
+        source.removeEventListener(name, listener);
+      }
       source.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 }

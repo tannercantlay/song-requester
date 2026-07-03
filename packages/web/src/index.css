@@ -5,3 +5,20 @@
 body {
   margin: 0;
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .qr-print-card,
+  .qr-print-card * {
+    visibility: visible;
+  }
+  .qr-print-card {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: max-content;
+    height: max-content;
+  }
+}

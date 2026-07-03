@@ -8,6 +8,8 @@ import { SongRow } from "../components/SongRow";
 export default function GuestPage() {
   const { token = "" } = useParams();
   const [search, setSearch] = useState("");
+  const [name, setName] = useState("");
+  const [note, setNote] = useState("");
   const queryClient = useQueryClient();
   const guestToken = getGuestToken();
 
@@ -24,7 +26,13 @@ export default function GuestPage() {
   });
 
   const requestMutation = useMutation({
-    mutationFn: (songId: string) => postSongRequest(token, { songId, requesterToken: guestToken }),
+    mutationFn: (songId: string) =>
+      postSongRequest(token, {
+        songId,
+        requesterToken: guestToken,
+        name: name.trim() || undefined,
+        note: note.trim() || undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["songs", token] });
     },
@@ -65,6 +73,31 @@ export default function GuestPage() {
           placeholder="Search songs or artists…"
           className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
         />
+
+        <details className="mt-2">
+          <summary className="cursor-pointer text-xs text-slate-400">
+            Add your name / a dedication (optional)
+          </summary>
+          <div className="mt-2 flex flex-col gap-2">
+            <input
+              type="text"
+              value={name}
+              maxLength={24}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
+            />
+            <input
+              type="text"
+              value={note}
+              maxLength={80}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Dedication, e.g. for the birthday girl"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
+            />
+          </div>
+        </details>
+
         {requestMutation.isError && (
           <p className="mt-2 text-sm text-red-600">
             {requestMutation.error instanceof ApiError

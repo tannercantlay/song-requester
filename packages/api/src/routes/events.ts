@@ -1,7 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAdmin } from "../auth/requireAdmin.js";
-import { createEvent, getEventById, listActiveEvents, patchEvent } from "../services/events.js";
+import {
+  blockGuest,
+  createEvent,
+  getEventById,
+  listActiveEvents,
+  patchEvent,
+  reorderQueue,
+} from "../services/events.js";
 import { getQueue, HttpError } from "../services/requests.js";
 import { broadcast, subscribe } from "../sse.js";
 
@@ -10,6 +17,8 @@ const patchEventSchema = z.object({
   status: z.enum(["active", "ended"]).optional(),
   requestsPaused: z.boolean().optional(),
 });
+const reorderSchema = z.object({ order: z.array(z.string().uuid()).min(1) });
+const blockSchema = z.object({ requesterToken: z.string().min(1) });
 
 export async function eventsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", requireAdmin);
@@ -78,6 +87,41 @@ export async function eventsRoutes(app: FastifyInstance): Promise<void> {
       throw err;
     }
     return getQueue(id);
+  });
+
+  app.post("/api/events/:id/reorder", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const parsed = reorderSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+    }
+    try {
+      await reorderQueue(id, parsed.data.order);
+      broadcast(id, "queue.reordered", { order: parsed.data.order });
+      return getQueue(id);
+    } catch (err) {
+      if (err instanceof HttpError) {
+        return reply.code(err.status).send({ error: err.message });
+      }
+      throw err;
+    }
+  });
+
+  app.post("/api/events/:id/block", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const parsed = blockSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+    }
+    try {
+      await blockGuest(id, parsed.data.requesterToken);
+      return reply.code(204).send();
+    } catch (err) {
+      if (err instanceof HttpError) {
+        return reply.code(err.status).send({ error: err.message });
+      }
+      throw err;
+    }
   });
 
   app.get("/api/events/:id/stream", async (request, reply) => {
