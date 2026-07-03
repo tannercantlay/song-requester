@@ -1,0 +1,20 @@
+{
+  "name": "setlist",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "migrate": "dbmate up",
+    "migrate:down": "dbmate down",
+    "seed": "psql \"$DATABASE_URL\" -f db/seeds/dev_seed.sql",
+    "create-admin": "pnpm --filter api create-admin",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
