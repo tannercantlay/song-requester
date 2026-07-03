@@ -1,0 +1,99 @@
+import type { FastifyInstance } from "fastify";
+import { z } from "zod";
+import { getActiveEventByToken } from "../services/events.js";
+import { createOrUpvote, getGuestSongs, HttpError } from "../services/requests.js";
+import { sanitizeGuestText, containsProfanity } from "../lib/moderation.js";
+import { db } from "../db.js";
+import { broadcast } from "../sse.js";
+
+const requestBodySchema = z.object({
+  songId: z.string().uuid(),
+  requesterToken: z.string().min(8).max(128),
+  name: z.string().max(24).optional(),
+  note: z.string().max(80).optional(),
+});
+
+export async function publicRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/api/e/:token", async (request) => {
+    const { token } = request.params as { token: string };
+    const event = await getActiveEventByToken(token);
+    return { id: event.id, name: event.name, requestsPaused: event.requests_paused };
+  });
+
+  app.get("/api/e/:token/songs", async (request) => {
+    const { token } = request.params as { token: string };
+    const { search } = request.query as { search?: string };
+    const event = await getActiveEventByToken(token);
+    const songs = await getGuestSongs(event.id, search);
+    return { requestsPaused: event.requests_paused, songs };
+  });
+
+  app.get("/api/e/:token/now-playing", async (request) => {
+    const { token } = request.params as { token: string };
+    const event = await getActiveEventByToken(token);
+    const playing = await db
+      .selectFrom("request")
+      .innerJoin("song", "song.id", "request.song_id")
+      .select(["request.id as id", "song.title as title", "song.artist as artist"])
+      .where("request.event_id", "=", event.id)
+      .where("request.status", "=", "playing")
+      .executeTakeFirst();
+    return { nowPlaying: playing ?? null };
+  });
+
+  app.post("/api/e/:token/requests", async (request, reply) => {
+    const { token } = request.params as { token: string };
+    const parsed = requestBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+    }
+    const { songId, requesterToken } = parsed.data;
+    let { name, note } = parsed.data;
+
+    if (name) {
+      name = sanitizeGuestText(name);
+      if (containsProfanity(name)) {
+        return reply.code(400).send({ error: "Name contains disallowed language" });
+      }
+    }
+    if (note) {
+      note = sanitizeGuestText(note);
+      if (containsProfanity(note)) {
+        return reply.code(400).send({ error: "Note contains disallowed language" });
+      }
+    }
+
+    const event = await getActiveEventByToken(token);
+    if (event.requests_paused) {
+      return reply.code(423).send({ error: "Requests are paused" });
+    }
+
+    try {
+      const result = await createOrUpvote({
+        eventId: event.id,
+        songId,
+        requesterToken,
+        name,
+        note,
+      });
+
+      broadcast(event.id, result.created ? "request.created" : "request.updated", {
+        requestId: result.requestId,
+        status: result.status,
+        voteCount: result.voteCount,
+      });
+
+      return reply.code(result.created ? 201 : 200).send({
+        id: result.requestId,
+        status: result.status,
+        voteCount: result.voteCount,
+        queuePosition: result.queuePosition,
+      });
+    } catch (err) {
+      if (err instanceof HttpError) {
+        return reply.code(err.status).send({ error: err.message });
+      }
+      throw err;
+    }
+  });
+}

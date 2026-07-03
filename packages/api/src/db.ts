@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect, type Generated, type ColumnType } from "kysely";
+import { Kysely, PostgresDialect, type Generated } from "kysely";
 import { Pool } from "pg";
 import { env } from "./env.js";
 
@@ -7,7 +7,7 @@ export interface AdminTable {
   email: string;
   password_hash: string;
   spotify_refresh_token_enc: string | null;
-  created_at: Generated<ColumnType<Date, string | undefined, never>>;
+  created_at: Generated<Date>;
 }
 
 export interface SongTable {
@@ -19,7 +19,7 @@ export interface SongTable {
   duration_ms: number | null;
   spotify_uri: string | null;
   is_active: Generated<boolean>;
-  created_at: Generated<ColumnType<Date, string | undefined, never>>;
+  created_at: Generated<Date>;
 }
 
 export interface EventTable {
@@ -28,7 +28,7 @@ export interface EventTable {
   public_token: string;
   status: Generated<"active" | "ended">;
   requests_paused: Generated<boolean>;
-  created_at: Generated<ColumnType<Date, string | undefined, never>>;
+  created_at: Generated<Date>;
   ended_at: Date | null;
 }
 
@@ -39,8 +39,8 @@ export interface RequestTable {
   status: Generated<"pending" | "playing" | "played" | "dismissed">;
   vote_count: Generated<number>;
   queue_position: number | null;
-  created_at: Generated<ColumnType<Date, string | undefined, never>>;
-  updated_at: Generated<ColumnType<Date, string | undefined, string | undefined>>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
   played_at: Date | null;
 }
 
@@ -50,14 +50,14 @@ export interface RequestVoteTable {
   requester_token: string;
   requester_name: string | null;
   note: string | null;
-  created_at: Generated<ColumnType<Date, string | undefined, never>>;
+  created_at: Generated<Date>;
 }
 
 export interface BlockedGuestTable {
   id: Generated<string>;
   event_id: string;
   requester_token: string;
-  created_at: Generated<ColumnType<Date, string | undefined, never>>;
+  created_at: Generated<Date>;
 }
 
 export interface Database {

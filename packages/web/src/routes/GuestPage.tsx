@@ -1,0 +1,98 @@
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, fetchEventPublic, fetchGuestSongs, postSongRequest } from "../api/client";
+import { getGuestToken } from "../lib/guestToken";
+import { SongRow } from "../components/SongRow";
+
+export default function GuestPage() {
+  const { token = "" } = useParams();
+  const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
+  const guestToken = getGuestToken();
+
+  const eventQuery = useQuery({
+    queryKey: ["event", token],
+    queryFn: () => fetchEventPublic(token),
+    retry: false,
+  });
+
+  const songsQuery = useQuery({
+    queryKey: ["songs", token, search],
+    queryFn: () => fetchGuestSongs(token, search),
+    enabled: eventQuery.isSuccess,
+  });
+
+  const requestMutation = useMutation({
+    mutationFn: (songId: string) => postSongRequest(token, { songId, requesterToken: guestToken }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["songs", token] });
+    },
+  });
+
+  if (eventQuery.isError) {
+    const status = eventQuery.error instanceof ApiError ? eventQuery.error.status : 0;
+    return (
+      <div className="flex min-h-screen items-center justify-center p-6 text-center">
+        <p className="text-slate-500">
+          {status === 410 ? "This event has ended." : "Event not found."}
+        </p>
+      </div>
+    );
+  }
+
+  if (eventQuery.isLoading || !eventQuery.data) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-slate-400">Loading…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto min-h-screen max-w-lg bg-white px-4 pb-12">
+      <header className="sticky top-0 z-10 bg-white pb-3 pt-6">
+        <h1 className="text-2xl font-semibold text-slate-900">{eventQuery.data.name}</h1>
+        {eventQuery.data.requestsPaused && (
+          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            Requests are paused — check back soon.
+          </p>
+        )}
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search songs or artists…"
+          className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
+        />
+        {requestMutation.isError && (
+          <p className="mt-2 text-sm text-red-600">
+            {requestMutation.error instanceof ApiError
+              ? requestMutation.error.message
+              : "Something went wrong"}
+          </p>
+        )}
+      </header>
+
+      <ul>
+        {songsQuery.data?.songs.map((song) => (
+          <SongRow
+            key={song.id}
+            song={song}
+            pending={
+              requestMutation.isPending && requestMutation.variables === song.id
+            }
+            onRequest={(songId) => {
+              if (eventQuery.data.requestsPaused) return;
+              requestMutation.mutate(songId);
+            }}
+          />
+        ))}
+      </ul>
+
+      {songsQuery.data?.songs.length === 0 && (
+        <p className="py-8 text-center text-slate-400">No songs match your search.</p>
+      )}
+    </div>
+  );
+}
