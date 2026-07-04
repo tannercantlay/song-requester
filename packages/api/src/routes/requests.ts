@@ -11,7 +11,7 @@ const patchRequestSchema = z.object({
 export async function requestsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", requireAdmin);
 
-  app.patch("/api/requests/:id", async (request, reply) => {
+  app.patch("/api/requests/:id", { preHandler: app.csrfProtection }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const parsed = patchRequestSchema.safeParse(request.body);
     if (!parsed.success) {

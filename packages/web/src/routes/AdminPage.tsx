@@ -35,6 +35,8 @@ export default function AdminPage() {
   const [eventId, setEventId] = useState<string | null>(null);
   const [muted, setMuted] = useState(isChimeMuted());
   const [showQr, setShowQr] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
 
   const eventsQuery = useQuery({ queryKey: ["admin-events"], queryFn: fetchAdminEvents });
 
@@ -80,6 +82,14 @@ export default function AdminPage() {
   const pauseMutation = useMutation({
     mutationFn: (requestsPaused: boolean) => patchEvent(eventId!, { requestsPaused }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-events"] }),
+  });
+
+  const renameMutation = useMutation({
+    mutationFn: (name: string) => patchEvent(eventId!, { name }),
+    onSuccess: () => {
+      setEditingName(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-events"] });
+    },
   });
 
   const sensors = useSensors(
@@ -139,7 +149,50 @@ export default function AdminPage() {
     <div className="mx-auto min-h-screen max-w-2xl bg-white px-4 pb-12">
       <header className="sticky top-0 z-10 bg-white pb-3 pt-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-slate-900">{event?.name ?? "Admin"}</h1>
+          {editingName ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (nameDraft.trim()) renameMutation.mutate(nameDraft.trim());
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                autoFocus
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                maxLength={120}
+                className="rounded-lg border border-slate-200 px-2 py-1 text-xl font-semibold text-slate-900 outline-none focus:border-purple-400"
+              />
+              <button
+                type="submit"
+                disabled={renameMutation.isPending}
+                className="rounded-full bg-purple-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingName(false)}
+                className="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-600"
+              >
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setNameDraft(event?.name ?? "");
+                setEditingName(true);
+              }}
+              className="group flex items-center gap-2 text-left"
+              title="Click to rename"
+            >
+              <h1 className="text-2xl font-semibold text-slate-900">{event?.name ?? "Admin"}</h1>
+              <span className="text-sm text-slate-300 group-hover:text-slate-500">✎</span>
+            </button>
+          )}
           <div className="flex items-center gap-2">
             <button
               type="button"

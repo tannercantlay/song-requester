@@ -14,6 +14,7 @@ import { broadcast, subscribe } from "../sse.js";
 
 const createEventSchema = z.object({ name: z.string().min(1).max(120) });
 const patchEventSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
   status: z.enum(["active", "ended"]).optional(),
   requestsPaused: z.boolean().optional(),
 });
@@ -35,7 +36,7 @@ export async function eventsRoutes(app: FastifyInstance): Promise<void> {
     }));
   });
 
-  app.post("/api/events", async (request, reply) => {
+  app.post("/api/events", { preHandler: app.csrfProtection }, async (request, reply) => {
     const parsed = createEventSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
@@ -50,7 +51,7 @@ export async function eventsRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  app.patch("/api/events/:id", async (request, reply) => {
+  app.patch("/api/events/:id", { preHandler: app.csrfProtection }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const parsed = patchEventSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -59,6 +60,7 @@ export async function eventsRoutes(app: FastifyInstance): Promise<void> {
     try {
       const event = await patchEvent(id, parsed.data);
       broadcast(id, "event.updated", {
+        name: event.name,
         status: event.status,
         requestsPaused: event.requests_paused,
       });
@@ -89,7 +91,7 @@ export async function eventsRoutes(app: FastifyInstance): Promise<void> {
     return getQueue(id);
   });
 
-  app.post("/api/events/:id/reorder", async (request, reply) => {
+  app.post("/api/events/:id/reorder", { preHandler: app.csrfProtection }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const parsed = reorderSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -107,7 +109,7 @@ export async function eventsRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.post("/api/events/:id/block", async (request, reply) => {
+  app.post("/api/events/:id/block", { preHandler: app.csrfProtection }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const parsed = blockSchema.safeParse(request.body);
     if (!parsed.success) {

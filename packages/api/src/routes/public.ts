@@ -41,7 +41,17 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
     return { nowPlaying: playing ?? null };
   });
 
-  app.post("/api/e/:token/requests", async (request, reply) => {
+  const requestRateLimit = app.rateLimit({
+    max: 1,
+    timeWindow: 3_000,
+    keyGenerator: (request) => {
+      const body = request.body as { requesterToken?: string } | undefined;
+      return `${request.ip}:${body?.requesterToken ?? ""}`;
+    },
+    errorResponseBuilder: () => ({ error: "You're requesting too fast — wait a moment and try again" }),
+  });
+
+  app.post("/api/e/:token/requests", { preHandler: requestRateLimit }, async (request, reply) => {
     const { token } = request.params as { token: string };
     const parsed = requestBodySchema.safeParse(request.body);
     if (!parsed.success) {

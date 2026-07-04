@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 import App from "./App.tsx";
 import GuestPage from "./routes/GuestPage.tsx";
+import LoginPage from "./routes/LoginPage.tsx";
+import AdminLayout from "./routes/AdminLayout.tsx";
 import AdminPage from "./routes/AdminPage.tsx";
+import CatalogPage from "./routes/CatalogPage.tsx";
+import TeamPage from "./routes/TeamPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +20,12 @@ createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/e/:token" element={<GuestPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminPage />} />
+            <Route path="catalog" element={<CatalogPage />} />
+            <Route path="team" element={<TeamPage />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

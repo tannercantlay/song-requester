@@ -41,12 +41,13 @@ export async function createEvent(name: string) {
 
 export async function patchEvent(
   id: string,
-  patch: { status?: "active" | "ended"; requestsPaused?: boolean },
+  patch: { name?: string; status?: "active" | "ended"; requestsPaused?: boolean },
 ) {
   await getEventById(id);
   const updated = await db
     .updateTable("event")
     .set({
+      name: patch.name,
       status: patch.status,
       requests_paused: patch.requestsPaused,
       ended_at: patch.status === "ended" ? new Date() : undefined,

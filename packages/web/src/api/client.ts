@@ -7,11 +7,32 @@ export class ApiError extends Error {
   }
 }
 
+let csrfToken: string | null = null;
+
+async function getCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  const res = await fetch("/api/auth/csrf");
+  const body = await res.json();
+  csrfToken = body.csrfToken;
+  return csrfToken!;
+}
+
+const MUTATING_METHODS = new Set(["POST", "PATCH", "DELETE", "PUT"]);
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
+  const method = (init?.method ?? "GET").toUpperCase();
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(init?.headers as Record<string, string>) };
+
+  if (MUTATING_METHODS.has(method)) {
+    headers["x-csrf-token"] = await getCsrfToken();
+  }
+
+  const res = await fetch(url, { ...init, method, headers });
+
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new ApiError(res.status, body.error ?? `Request failed (${res.status})`);
@@ -111,7 +132,7 @@ export function patchRequestStatus(
 
 export function patchEvent(
   eventId: string,
-  patch: { status?: "active" | "ended"; requestsPaused?: boolean },
+  patch: { name?: string; status?: "active" | "ended"; requestsPaused?: boolean },
 ): Promise<AdminEvent> {
   return request(`/api/events/${eventId}`, { method: "PATCH", body: JSON.stringify(patch) });
 }
@@ -123,14 +144,99 @@ export function reorderQueue(eventId: string, order: string[]): Promise<QueueReq
   });
 }
 
-export async function blockGuest(eventId: string, requesterToken: string): Promise<void> {
-  const res = await fetch(`/api/events/${eventId}/block`, {
+export function blockGuest(eventId: string, requesterToken: string): Promise<void> {
+  return request(`/api/events/${eventId}/block`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ requesterToken }),
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, body.error ?? `Request failed (${res.status})`);
-  }
+}
+
+// --- Auth ---
+
+export interface Me {
+  id: string;
+  email: string;
+  spotifyConnected: boolean;
+}
+
+export function login(email: string, password: string): Promise<{ id: string; email: string }> {
+  return request("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+}
+
+export function logout(): Promise<void> {
+  return request("/api/auth/logout", { method: "POST" });
+}
+
+export function fetchMe(): Promise<Me> {
+  return request("/api/me");
+}
+
+// --- Catalog (songs) ---
+
+export interface AdminSong {
+  id: string;
+  title: string;
+  artist: string;
+  album: string | null;
+  albumArtUrl: string | null;
+  durationMs: number | null;
+  spotifyUri: string | null;
+  isActive: boolean;
+}
+
+export function fetchSongsAdmin(search: string): Promise<AdminSong[]> {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : "";
+  return request(`/api/songs${qs}`);
+}
+
+export function createSong(input: { title: string; artist: string }): Promise<AdminSong> {
+  return request("/api/songs", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function updateSong(
+  id: string,
+  patch: Partial<{ title: string; artist: string; isActive: boolean }>,
+): Promise<AdminSong> {
+  return request(`/api/songs/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+}
+
+export function hideSong(id: string): Promise<void> {
+  return request(`/api/songs/${id}`, { method: "DELETE" });
+}
+
+// --- Spotify ---
+
+export interface SpotifyPlaylist {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  trackCount: number;
+}
+
+export function fetchSpotifyPlaylists(): Promise<SpotifyPlaylist[]> {
+  return request("/api/spotify/playlists");
+}
+
+export function importSpotifyPlaylist(playlistId: string): Promise<{ imported: number }> {
+  return request("/api/spotify/import", { method: "POST", body: JSON.stringify({ playlistId }) });
+}
+
+// --- Admin management ---
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  createdAt: string;
+}
+
+export function fetchAdmins(): Promise<AdminUser[]> {
+  return request("/api/admins");
+}
+
+export function createAdminUser(email: string, password: string): Promise<AdminUser> {
+  return request("/api/admins", { method: "POST", body: JSON.stringify({ email, password }) });
+}
+
+export function deleteAdminUser(id: string): Promise<void> {
+  return request(`/api/admins/${id}`, { method: "DELETE" });
 }
