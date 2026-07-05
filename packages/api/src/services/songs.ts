@@ -1,6 +1,7 @@
 import { db } from "../db.js";
 import { HttpError } from "./requests.js";
 import type { SpotifyTrack } from "./spotify.js";
+import type { ParsedRow } from "../lib/spreadsheet.js";
 
 export async function listSongsAdmin(search?: string) {
   let query = db.selectFrom("song").selectAll().orderBy("title", "asc");
@@ -64,6 +65,30 @@ export async function updateSong(id: string, patch: UpdateSongInput) {
 
 export async function hideSong(id: string) {
   return updateSong(id, { isActive: false });
+}
+
+export async function bulkImportSongs(rows: ParsedRow[]): Promise<{ imported: number; skipped: number }> {
+  const existing = await db.selectFrom("song").select(["title", "artist"]).execute();
+  const seen = new Set(existing.map((s) => `${s.title.toLowerCase()}::${s.artist.toLowerCase()}`));
+
+  let imported = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    const key = `${row.title.toLowerCase()}::${row.artist.toLowerCase()}`;
+    if (seen.has(key)) {
+      skipped++;
+      continue;
+    }
+    seen.add(key);
+    await db
+      .insertInto("song")
+      .values({ title: row.title, artist: row.artist, album: row.album ?? null })
+      .execute();
+    imported++;
+  }
+
+  return { imported, skipped };
 }
 
 export async function upsertFromSpotify(tracks: SpotifyTrack[]): Promise<number> {

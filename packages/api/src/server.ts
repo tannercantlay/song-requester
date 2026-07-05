@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import rateLimit from "@fastify/rate-limit";
+import multipart from "@fastify/multipart";
 import { env } from "./env.js";
 import { registerAuth } from "./auth/plugin.js";
 import { HttpError } from "./services/requests.js";
@@ -32,6 +33,7 @@ app.get("/health", async () => ({ ok: true }));
 // resolution (default import types as the whole namespace); the runtime
 // export is a plain Fastify plugin function, so this cast is safe.
 await app.register(rateLimit as unknown as Parameters<typeof app.register>[0], { global: false });
+await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
 await registerAuth(app);
 
 await app.register(publicRoutes);

@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAdmin } from "../auth/requireAdmin.js";
-import { createSong, hideSong, listSongsAdmin, updateSong } from "../services/songs.js";
+import { bulkImportSongs, createSong, hideSong, listSongsAdmin, updateSong } from "../services/songs.js";
+import { parseSpreadsheet } from "../lib/spreadsheet.js";
 import { HttpError } from "../services/requests.js";
 
 const createSongSchema = z.object({
@@ -79,6 +80,27 @@ export async function songsRoutes(app: FastifyInstance): Promise<void> {
       }
       throw err;
     }
+  });
+
+  app.post("/api/songs/import", { preHandler: app.csrfProtection }, async (request, reply) => {
+    const file = await request.file();
+    if (!file) {
+      return reply.code(400).send({ error: "No file uploaded" });
+    }
+    if (!/\.(csv|xlsx|xls)$/i.test(file.filename)) {
+      return reply.code(400).send({ error: "Only .csv, .xlsx, or .xls files are supported" });
+    }
+
+    const buffer = await file.toBuffer();
+    let parsed: ReturnType<typeof parseSpreadsheet>;
+    try {
+      parsed = parseSpreadsheet(buffer);
+    } catch {
+      return reply.code(400).send({ error: "Couldn't read that file — is it a valid CSV/Excel file?" });
+    }
+
+    const { imported, skipped } = await bulkImportSongs(parsed.rows);
+    return { imported, skipped, errors: parsed.errors };
   });
 
   app.delete("/api/songs/:id", { preHandler: app.csrfProtection }, async (request, reply) => {

@@ -40,6 +40,25 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+async function uploadFile<T>(url: string, file: File): Promise<T> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  // Don't set Content-Type manually — the browser needs to add its own
+  // multipart boundary, which it can only do if it builds the header itself.
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "x-csrf-token": await getCsrfToken() },
+    body: formData,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body.error ?? `Request failed (${res.status})`);
+  }
+  return body as T;
+}
+
 export interface EventPublic {
   id: string;
   name: string;
@@ -202,6 +221,16 @@ export function updateSong(
 
 export function hideSong(id: string): Promise<void> {
   return request(`/api/songs/${id}`, { method: "DELETE" });
+}
+
+export interface ImportSongsResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
+
+export function importSongsFile(file: File): Promise<ImportSongsResult> {
+  return uploadFile("/api/songs/import", file);
 }
 
 // --- Spotify ---

@@ -7,6 +7,7 @@ import {
   fetchMe,
   fetchSongsAdmin,
   fetchSpotifyPlaylists,
+  importSongsFile,
   importSpotifyPlaylist,
   updateSong,
   type AdminSong,
@@ -87,6 +88,55 @@ function SongRow({ song }: { song: AdminSong }) {
         </button>
       </div>
     </li>
+  );
+}
+
+function FileImportSection() {
+  const queryClient = useQueryClient();
+
+  const importMutation = useMutation({
+    mutationFn: (file: File) => importSongsFile(file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-songs"] }),
+  });
+
+  return (
+    <section className="mb-6 rounded-lg border border-slate-200 p-4">
+      <p className="mb-2 text-sm text-slate-500">
+        No Spotify? Import a catalog from a CSV or Excel file — columns "Title" and "Artist" required, "Album" optional.
+      </p>
+      <input
+        type="file"
+        accept=".csv,.xlsx,.xls"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) importMutation.mutate(file);
+          e.target.value = "";
+        }}
+        disabled={importMutation.isPending}
+        className="text-sm text-slate-600"
+      />
+      {importMutation.isPending && <p className="mt-2 text-sm text-slate-400">Importing…</p>}
+      {importMutation.isError && (
+        <p className="mt-2 text-sm text-red-600">
+          {importMutation.error instanceof ApiError ? importMutation.error.message : "Import failed"}
+        </p>
+      )}
+      {importMutation.isSuccess && (
+        <div className="mt-2 text-sm">
+          <p className="text-green-700">
+            Imported {importMutation.data.imported}, skipped {importMutation.data.skipped} duplicate
+            {importMutation.data.skipped === 1 ? "" : "s"}.
+          </p>
+          {importMutation.data.errors.length > 0 && (
+            <ul className="mt-1 list-disc pl-5 text-amber-700">
+              {importMutation.data.errors.map((err, i) => (
+                <li key={i}>{err}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -185,6 +235,7 @@ export default function CatalogPage() {
       <h1 className="mb-4 text-2xl font-semibold text-slate-900">Catalog</h1>
 
       <SpotifySection />
+      <FileImportSection />
 
       <form
         onSubmit={(e) => {
