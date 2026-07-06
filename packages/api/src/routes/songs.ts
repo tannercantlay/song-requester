@@ -1,7 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAdmin } from "../auth/requireAdmin.js";
-import { bulkImportSongs, createSong, hideSong, listSongsAdmin, updateSong } from "../services/songs.js";
+import {
+  bulkImportSongs,
+  createSong,
+  hideSong,
+  listGenres,
+  listSongsAdmin,
+  updateSong,
+} from "../services/songs.js";
 import { parseSpreadsheet } from "../lib/spreadsheet.js";
 import { HttpError } from "../services/requests.js";
 
@@ -11,6 +18,7 @@ const createSongSchema = z.object({
   album: z.string().max(200).optional(),
   albumArtUrl: z.string().url().optional(),
   durationMs: z.number().int().positive().optional(),
+  genre: z.string().max(60).optional(),
 });
 
 const updateSongSchema = z.object({
@@ -19,6 +27,7 @@ const updateSongSchema = z.object({
   album: z.string().max(200).nullable().optional(),
   albumArtUrl: z.string().url().nullable().optional(),
   durationMs: z.number().int().positive().nullable().optional(),
+  genre: z.string().max(60).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -35,10 +44,13 @@ export async function songsRoutes(app: FastifyInstance): Promise<void> {
       album: s.album,
       albumArtUrl: s.album_art_url,
       durationMs: s.duration_ms,
+      genre: s.genre,
       spotifyUri: s.spotify_uri,
       isActive: s.is_active,
     }));
   });
+
+  app.get("/api/songs/genres", async () => listGenres());
 
   app.post("/api/songs", { preHandler: app.csrfProtection }, async (request, reply) => {
     const parsed = createSongSchema.safeParse(request.body);
@@ -53,6 +65,7 @@ export async function songsRoutes(app: FastifyInstance): Promise<void> {
       album: song.album,
       albumArtUrl: song.album_art_url,
       durationMs: song.duration_ms,
+      genre: song.genre,
       isActive: song.is_active,
     });
   });
@@ -72,6 +85,7 @@ export async function songsRoutes(app: FastifyInstance): Promise<void> {
         album: song.album,
         albumArtUrl: song.album_art_url,
         durationMs: song.duration_ms,
+        genre: song.genre,
         isActive: song.is_active,
       };
     } catch (err) {

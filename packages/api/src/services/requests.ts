@@ -16,11 +16,12 @@ export interface GuestSong {
   album: string | null;
   albumArtUrl: string | null;
   durationMs: number | null;
+  genre: string | null;
   status: GuestSongStatus;
   voteCount: number;
 }
 
-export async function getGuestSongs(eventId: string, search?: string): Promise<GuestSong[]> {
+export async function getGuestSongs(eventId: string, search?: string, genre?: string): Promise<GuestSong[]> {
   let query = db
     .selectFrom("song")
     .leftJoin("request", (join) =>
@@ -34,6 +35,7 @@ export async function getGuestSongs(eventId: string, search?: string): Promise<G
       "song.album as album",
       "song.album_art_url as albumArtUrl",
       "song.duration_ms as durationMs",
+      "song.genre as genre",
       sql<GuestSongStatus>`coalesce(request.status, 'none')`.as("status"),
       sql<number>`coalesce(request.vote_count, 0)`.as("voteCount"),
     ])
@@ -43,6 +45,10 @@ export async function getGuestSongs(eventId: string, search?: string): Promise<G
     query = query.where((eb) =>
       eb.or([eb("song.title", "ilike", `%${search}%`), eb("song.artist", "ilike", `%${search}%`)]),
     );
+  }
+
+  if (genre) {
+    query = query.where("song.genre", "=", genre);
   }
 
   return query.execute();

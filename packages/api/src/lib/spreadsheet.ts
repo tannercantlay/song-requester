@@ -4,6 +4,7 @@ export interface ParsedRow {
   title: string;
   artist: string;
   album?: string;
+  genre?: string;
 }
 
 export interface ParseResult {
@@ -14,6 +15,7 @@ export interface ParseResult {
 const TITLE_KEYS = ["title", "song", "song title", "track", "track title", "name"];
 const ARTIST_KEYS = ["artist", "artist name", "performer"];
 const ALBUM_KEYS = ["album", "album name"];
+const GENRE_KEYS = ["genre", "category", "genre/category", "style"];
 
 function normalizeKey(key: string): string {
   return key.trim().toLowerCase();
@@ -48,12 +50,13 @@ export function parseSpreadsheet(buffer: Buffer): ParseResult {
     const title = findValue(row, TITLE_KEYS);
     const artist = findValue(row, ARTIST_KEYS);
     const album = findValue(row, ALBUM_KEYS);
+    const genre = findValue(row, GENRE_KEYS);
 
     if (!title || !artist) {
       errors.push(`Row ${rowNum}: missing ${!title ? "title" : "artist"}`);
       return;
     }
-    rows.push({ title, artist, album });
+    rows.push({ title, artist, album, genre });
   });
 
   return { rows, errors };

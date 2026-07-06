@@ -19,6 +19,7 @@ export interface CreateSongInput {
   album?: string;
   albumArtUrl?: string;
   durationMs?: number;
+  genre?: string;
 }
 
 export async function createSong(input: CreateSongInput) {
@@ -30,6 +31,7 @@ export async function createSong(input: CreateSongInput) {
       album: input.album ?? null,
       album_art_url: input.albumArtUrl ?? null,
       duration_ms: input.durationMs ?? null,
+      genre: input.genre ?? null,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
@@ -41,6 +43,7 @@ export interface UpdateSongInput {
   album?: string | null;
   albumArtUrl?: string | null;
   durationMs?: number | null;
+  genre?: string | null;
   isActive?: boolean;
 }
 
@@ -56,6 +59,7 @@ export async function updateSong(id: string, patch: UpdateSongInput) {
       album: patch.album,
       album_art_url: patch.albumArtUrl,
       duration_ms: patch.durationMs,
+      genre: patch.genre,
       is_active: patch.isActive,
     })
     .where("id", "=", id)
@@ -83,12 +87,24 @@ export async function bulkImportSongs(rows: ParsedRow[]): Promise<{ imported: nu
     seen.add(key);
     await db
       .insertInto("song")
-      .values({ title: row.title, artist: row.artist, album: row.album ?? null })
+      .values({ title: row.title, artist: row.artist, album: row.album ?? null, genre: row.genre ?? null })
       .execute();
     imported++;
   }
 
   return { imported, skipped };
+}
+
+export async function listGenres(): Promise<string[]> {
+  const rows = await db
+    .selectFrom("song")
+    .select("genre")
+    .where("genre", "is not", null)
+    .where("is_active", "=", true)
+    .distinct()
+    .orderBy("genre", "asc")
+    .execute();
+  return rows.map((r) => r.genre!);
 }
 
 export async function upsertFromSpotify(tracks: SpotifyTrack[]): Promise<number> {

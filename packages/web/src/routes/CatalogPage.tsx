@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
   createSong,
+  fetchAdminGenres,
   fetchMe,
   fetchSongsAdmin,
   fetchSpotifyPlaylists,
@@ -13,17 +14,21 @@ import {
   type AdminSong,
 } from "../api/client";
 
+const GENRE_DATALIST_ID = "genre-suggestions";
+
 function SongRow({ song }: { song: AdminSong }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(song.title);
   const [artist, setArtist] = useState(song.artist);
+  const [genre, setGenre] = useState(song.genre ?? "");
 
   const saveMutation = useMutation({
-    mutationFn: () => updateSong(song.id, { title, artist }),
+    mutationFn: () => updateSong(song.id, { title, artist, genre: genre.trim() || null }),
     onSuccess: () => {
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ["admin-songs"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-genres"] });
     },
   });
 
@@ -38,12 +43,19 @@ function SongRow({ song }: { song: AdminSong }) {
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-1/2 rounded border border-slate-200 px-2 py-1 text-sm"
+          className="w-1/3 rounded border border-slate-200 px-2 py-1 text-sm"
         />
         <input
           value={artist}
           onChange={(e) => setArtist(e.target.value)}
-          className="w-1/2 rounded border border-slate-200 px-2 py-1 text-sm"
+          className="w-1/3 rounded border border-slate-200 px-2 py-1 text-sm"
+        />
+        <input
+          value={genre}
+          onChange={(e) => setGenre(e.target.value)}
+          placeholder="Genre"
+          list={GENRE_DATALIST_ID}
+          className="w-1/3 rounded border border-slate-200 px-2 py-1 text-sm"
         />
         <button
           type="button"
@@ -68,7 +80,10 @@ function SongRow({ song }: { song: AdminSong }) {
     <li className="flex items-center justify-between gap-3 border-b border-slate-100 py-2">
       <div className={`min-w-0 ${song.isActive ? "" : "opacity-40"}`}>
         <p className="truncate font-medium text-slate-900">{song.title}</p>
-        <p className="truncate text-sm text-slate-500">{song.artist}</p>
+        <p className="truncate text-sm text-slate-500">
+          {song.artist}
+          {song.genre && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">{song.genre}</span>}
+        </p>
       </div>
       <div className="flex shrink-0 gap-2">
         <button
@@ -215,24 +230,33 @@ export default function CatalogPage() {
   const [search, setSearch] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newArtist, setNewArtist] = useState("");
+  const [newGenre, setNewGenre] = useState("");
 
   const songsQuery = useQuery({
     queryKey: ["admin-songs", search],
     queryFn: () => fetchSongsAdmin(search),
   });
 
+  const genresQuery = useQuery({ queryKey: ["admin-genres"], queryFn: fetchAdminGenres });
+
   const addMutation = useMutation({
-    mutationFn: () => createSong({ title: newTitle, artist: newArtist }),
+    mutationFn: () => createSong({ title: newTitle, artist: newArtist, genre: newGenre.trim() || undefined }),
     onSuccess: () => {
       setNewTitle("");
       setNewArtist("");
+      setNewGenre("");
       queryClient.invalidateQueries({ queryKey: ["admin-songs"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-genres"] });
     },
   });
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-12 pt-6">
       <h1 className="mb-4 text-2xl font-semibold text-slate-900">Catalog</h1>
+
+      <datalist id={GENRE_DATALIST_ID}>
+        {genresQuery.data?.map((g) => <option key={g} value={g} />)}
+      </datalist>
 
       <SpotifySection />
       <FileImportSection />
@@ -254,6 +278,13 @@ export default function CatalogPage() {
           value={newArtist}
           onChange={(e) => setNewArtist(e.target.value)}
           placeholder="Artist"
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
+        <input
+          value={newGenre}
+          onChange={(e) => setNewGenre(e.target.value)}
+          placeholder="Genre (optional)"
+          list={GENRE_DATALIST_ID}
           className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
         />
         <button

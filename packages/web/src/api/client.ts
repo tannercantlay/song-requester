@@ -74,6 +74,7 @@ export interface GuestSong {
   album: string | null;
   albumArtUrl: string | null;
   durationMs: number | null;
+  genre: string | null;
   status: GuestSongStatus;
   voteCount: number;
 }
@@ -85,8 +86,12 @@ export function fetchEventPublic(token: string): Promise<EventPublic> {
 export function fetchGuestSongs(
   token: string,
   search: string,
-): Promise<{ requestsPaused: boolean; songs: GuestSong[] }> {
-  const qs = search ? `?search=${encodeURIComponent(search)}` : "";
+  genre?: string,
+): Promise<{ requestsPaused: boolean; songs: GuestSong[]; genres: string[] }> {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (genre) params.set("genre", genre);
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return request(`/api/e/${token}/songs${qs}`);
 }
 
@@ -199,6 +204,7 @@ export interface AdminSong {
   album: string | null;
   albumArtUrl: string | null;
   durationMs: number | null;
+  genre: string | null;
   spotifyUri: string | null;
   isActive: boolean;
 }
@@ -208,13 +214,17 @@ export function fetchSongsAdmin(search: string): Promise<AdminSong[]> {
   return request(`/api/songs${qs}`);
 }
 
-export function createSong(input: { title: string; artist: string }): Promise<AdminSong> {
+export function fetchAdminGenres(): Promise<string[]> {
+  return request("/api/songs/genres");
+}
+
+export function createSong(input: { title: string; artist: string; genre?: string }): Promise<AdminSong> {
   return request("/api/songs", { method: "POST", body: JSON.stringify(input) });
 }
 
 export function updateSong(
   id: string,
-  patch: Partial<{ title: string; artist: string; isActive: boolean }>,
+  patch: Partial<{ title: string; artist: string; genre: string | null; isActive: boolean }>,
 ): Promise<AdminSong> {
   return request(`/api/songs/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
 }

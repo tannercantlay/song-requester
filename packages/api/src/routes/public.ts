@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getActiveEventByToken } from "../services/events.js";
 import { createOrUpvote, getGuestSongs, HttpError } from "../services/requests.js";
 import { sanitizeGuestText, containsProfanity } from "../lib/moderation.js";
+import { listGenres } from "../services/songs.js";
 import { db } from "../db.js";
 import { broadcast } from "../sse.js";
 
@@ -22,10 +23,10 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/api/e/:token/songs", async (request) => {
     const { token } = request.params as { token: string };
-    const { search } = request.query as { search?: string };
+    const { search, genre } = request.query as { search?: string; genre?: string };
     const event = await getActiveEventByToken(token);
-    const songs = await getGuestSongs(event.id, search);
-    return { requestsPaused: event.requests_paused, songs };
+    const [songs, genres] = await Promise.all([getGuestSongs(event.id, search, genre), listGenres()]);
+    return { requestsPaused: event.requests_paused, songs, genres };
   });
 
   app.get("/api/e/:token/now-playing", async (request) => {

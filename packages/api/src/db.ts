@@ -18,6 +18,7 @@ export interface SongTable {
   album_art_url: string | null;
   duration_ms: number | null;
   spotify_uri: string | null;
+  genre: string | null;
   is_active: Generated<boolean>;
   created_at: Generated<Date>;
 }

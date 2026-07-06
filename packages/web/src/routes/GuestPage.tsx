@@ -8,6 +8,7 @@ import { SongRow } from "../components/SongRow";
 export default function GuestPage() {
   const { token = "" } = useParams();
   const [search, setSearch] = useState("");
+  const [genre, setGenre] = useState("");
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const queryClient = useQueryClient();
@@ -20,8 +21,8 @@ export default function GuestPage() {
   });
 
   const songsQuery = useQuery({
-    queryKey: ["songs", token, search],
-    queryFn: () => fetchGuestSongs(token, search),
+    queryKey: ["songs", token, search, genre],
+    queryFn: () => fetchGuestSongs(token, search, genre || undefined),
     enabled: eventQuery.isSuccess,
   });
 
@@ -73,6 +74,21 @@ export default function GuestPage() {
           placeholder="Search songs or artists…"
           className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
         />
+
+        {songsQuery.data && songsQuery.data.genres.length > 0 && (
+          <select
+            value={genre}
+            onChange={(e) => setGenre(e.target.value)}
+            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
+          >
+            <option value="">All genres</option>
+            {songsQuery.data.genres.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        )}
 
         <details className="mt-2">
           <summary className="cursor-pointer text-xs text-slate-400">
