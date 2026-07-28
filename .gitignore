@@ -6,3 +6,5 @@ dist/
 !.env.example
 
 .claude/
+
+setlist-plan.tar.gz
