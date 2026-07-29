@@ -116,16 +116,158 @@ your own account or the last remaining admin.
 
 ## Deployment
 
-See **[DEPLOY.md](DEPLOY.md)** for the full runbook. Short version: it deploys
-as a single Docker container on Render's free tier with Postgres on Neon, and
-Fastify serves both the API and the built SPA from one origin.
+Deploys as a single Docker container on Render's free tier, with Postgres on
+Neon. Fastify serves both the API and the built SPA from one origin. Total cost
+$0/mo. Budget about 20 minutes, most of it waiting on the first Docker build.
 
-One constraint worth knowing before you change anything about the topology: the
-API must run as **exactly one instance**. Live queue updates broadcast through
-an in-process `EventEmitter` (`packages/api/src/sse.ts`), so a second instance
-breaks them *silently* — a guest's request simply never appears on the host's
-queue, with nothing logged. This is why the app isn't on a serverless platform
-and why `render.yaml` pins `numInstances: 1`.
+**[DEPLOY.md](DEPLOY.md)** carries the same steps with the full reasoning behind
+each one — read it if something goes wrong or you want to know *why* a setting
+is what it is. What follows is the configuration itself.
+
+### Before you start
+
+`render.yaml` has to exist on the branch Render watches, which defaults to your
+repo's default branch. If the deployment work is still sitting on a feature
+branch, merge it first or point the Blueprint at that branch explicitly.
+
+### 1. Configure Neon
+
+1. Create a free project at [neon.tech](https://neon.tech). Pick a region near
+   your Render region (`oregon` if you follow this doc as written).
+2. Copy the **direct (unpooled)** connection string — *not* the pooled/PgBouncer
+   one. This app is a single long-lived process with its own connection pool, so
+   PgBouncer adds nothing and its transaction-mode prepared-statement handling is
+   a subtlety you don't need.
+3. Make sure it ends with `?sslmode=require`:
+   ```
+   postgres://<user>:<password>@<project>.neon.tech/setlist?sslmode=require
+   ```
+   Neon usually appends `&channel_binding=require` too. **Leave it** — the
+   container strips it before running migrations, because `dbmate` uses a driver
+   that forwards unknown parameters to Postgres, which rejects that one outright.
+   The app's own driver ignores it.
+
+You do **not** need to run migrations yourself — the container applies them on
+every boot. In particular don't run `pnpm migrate` against Neon: the root script
+omits `--no-dump-schema`, so it rewrites `db/schema.sql` from the remote database
+and leaves an unexpected diff in your working tree.
+
+Free tier: 0.5 GB storage, 100 CU-hours/month, 5 GB transfer. Scales to zero
+after 5 minutes idle and resumes in about a second, with no pause and no expiry —
+which is why Neon rather than Supabase (pauses after 7 days idle, ~30s wake) or
+Render's own free Postgres (deleted 30 days after creation).
+
+### 2. Generate secrets
+
+Run `openssl rand -base64 32` three times:
+
+| Variable | Notes |
+|---|---|
+| `JWT_SECRET` | Must be ≥32 characters — `env.ts` enforces it and the process exits at boot if it's short |
+| `COOKIE_SECRET` | Any random string |
+| `CRYPTO_KEY` | 32-byte base64. Encrypts stored Spotify tokens — **changing it later invalidates every saved Spotify connection** |
+
+Keep them in a password manager. They go into the Render dashboard and are never
+committed.
+
+### 3. Configure Render
+
+1. **New → Blueprint**, and connect the repo. It must be **Blueprint**, not
+   **Web Service** — only a Blueprint instance reads `render.yaml`. A
+   hand-created Web Service ignores the file entirely and you'd silently lose
+   every setting it pins, including `numInstances: 1`.
+2. Render reads `render.yaml` and creates the service: Docker runtime,
+   `./Dockerfile`, free plan, region `oregon`, health check `/health`, one
+   instance.
+3. Fill in the environment variables it prompts for. Every one is declared
+   `sync: false`, meaning Render asks for it in the dashboard and it never
+   touches the repo:
+
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | Neon connection string from step 1 |
+   | `JWT_SECRET` / `COOKIE_SECRET` / `CRYPTO_KEY` | From step 2 |
+   | `ADMIN_EMAIL` | The email you'll log in as |
+   | `WEB_ORIGIN` | `https://<service>.onrender.com` |
+   | `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` / `SPOTIFY_REDIRECT_URI` | Optional — leave blank to start |
+
+   **Expect a chicken-and-egg on `WEB_ORIGIN`:** it needs the Render URL, which
+   doesn't exist until the service is created. Put a placeholder in, let Render
+   create the service, note the real URL, then update the variable and redeploy.
+
+   Leaving the Spotify variables blank is fine — they're optional in `env.ts`,
+   and the spreadsheet import covers catalog loading. Skipping Spotify on the
+   first pass also avoids the one part of the app that has never been tested
+   end-to-end.
+4. Deploy. Then confirm `https://<service>.onrender.com/health` returns
+   `{"ok":true}`, and check the deploy log for `Applying: 0001_initial_schema`
+   and `0002_add_song_genre`.
+
+Free tier: 512 MB RAM / 0.1 CPU, 750 instance-hours/month per workspace, 100 GB
+bandwidth, free TLS on `*.onrender.com`. No persistent disk and no shell access —
+which is why the next step runs locally.
+
+### 4. Create the first admin
+
+No shell on the free tier, so create it from your machine against Neon:
+
+```bash
+DATABASE_URL="<neon url>" \
+JWT_SECRET="$(openssl rand -hex 32)" \
+COOKIE_SECRET=x CRYPTO_KEY=x \
+ADMIN_EMAIL=you@example.com \
+WEB_ORIGIN=https://<service>.onrender.com \
+pnpm create-admin
+```
+
+The dummy values are load-bearing: `create-admin.ts` imports the env module,
+which validates the *whole* schema at load time with no dotenv loader, so every
+variable must be set even though only `DATABASE_URL` gets used. It prompts for a
+password on stdin.
+
+### 5. Set up a keep-alive pinger
+
+Do this before your first real gig. Point [UptimeRobot](https://uptimerobot.com)
+or [cron-job.org](https://cron-job.org) at
+`https://<service>.onrender.com/health` every 5–10 minutes.
+
+This matters more than it sounds. Free services spin down after 15 minutes idle
+and take about a minute to wake, and whether an open SSE connection defers that
+is **unverified** — Render documents spin-down against inbound traffic, and the
+heartbeat in `sse.ts` is server-to-client only. The failure mode is quiet: the
+band plays and requests just stop appearing. Belt and braces, open the admin page
+yourself about five minutes before doors.
+
+`.github/workflows/keepalive.yml` is a zero-signup fallback using GitHub Actions'
+scheduler, but its cron is best-effort and commonly 10–30 minutes late — read the
+caveats in its header before relying on it for an event that matters.
+
+Keeping the service always on costs ~730 of the 750 monthly instance-hours, so it
+fits but leaves no room for a second free service in the same workspace.
+`/health` doesn't touch the database, so pings don't spend Neon compute hours.
+
+### If you use Spotify
+
+Add `https://<service>.onrender.com/api/spotify/callback` to your Spotify app's
+Redirect URIs. It must match `SPOTIFY_REDIRECT_URI` byte for byte. Moving to a
+custom domain later means updating `WEB_ORIGIN`, `SPOTIFY_REDIRECT_URI`, and the
+URI registered with Spotify together.
+
+### The one constraint not to break
+
+The API must run as **exactly one instance**. Live queue updates broadcast
+through an in-process `EventEmitter` (`packages/api/src/sse.ts`), so a second
+instance breaks them *silently* — a guest's request simply never appears on the
+host's queue, with nothing logged. This is why the app isn't on a serverless
+platform and why `render.yaml` pins `numInstances: 1`. Free instances can't scale
+anyway; it becomes yours to enforce the moment you upgrade.
+
+### Verifying it actually works
+
+`/health` returning 200 proves very little. The check that matters: open the
+admin queue on a laptop and the guest link on a phone, submit a request, and
+confirm it appears **without a refresh**. That's the only thing that proves the
+live-update path survived containerization and Render's proxy.
 
 ## Scripts
 
