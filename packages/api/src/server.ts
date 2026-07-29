@@ -1,6 +1,9 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
 import { env } from "./env.js";
 import { registerAuth } from "./auth/plugin.js";
 import { HttpError } from "./services/requests.js";
@@ -11,6 +14,10 @@ import { authRoutes } from "./routes/auth.js";
 import { songsRoutes } from "./routes/songs.js";
 import { spotifyRoutes } from "./routes/spotify.js";
 import { adminsRoutes } from "./routes/admins.js";
+
+const webDist = process.env.WEB_DIST
+  ? path.resolve(process.env.WEB_DIST)
+  : fileURLToPath(new URL("../../web/dist/", import.meta.url));
 
 const app = Fastify({ logger: true });
 
@@ -44,8 +51,22 @@ await app.register(songsRoutes);
 await app.register(spotifyRoutes);
 await app.register(adminsRoutes);
 
+await app.register(fastifyStatic, {
+  root: webDist,
+  prefix: "/",
+  index: ["index.html"],
+  wildcard: false,
+});
+
+app.setNotFoundHandler((request, reply) => {
+  if (request.method !== "GET" || request.url.startsWith("/api/")) {
+    return reply.code(404).send({ error: "Not found" });
+  }
+  return reply.sendFile("index.html");
+});
+
 app
-  .listen({ port: env.API_PORT, host: "0.0.0.0" })
+  .listen({ port: env.PORT ?? env.API_PORT, host: "0.0.0.0" })
   .catch((err) => {
     app.log.error(err);
     process.exit(1);

@@ -1,0 +1,33 @@
+# Zero-signup fallback keep-alive pinger for the Render free web service.
+#
+# Caveats — read before relying on this alone for a real event:
+#   - GitHub's `schedule` cron runs on shared runners on a best-effort
+#     basis; it is commonly 10-30 minutes late, especially at the top of
+#     the hour. It is NOT a guarantee of a ping every 10 minutes.
+#   - GitHub automatically disables scheduled workflows on a repo after
+#     60 days with no repo activity (commits, etc). If this repo goes
+#     quiet, the pings silently stop.
+#
+# For anything that matters, use a dedicated external pinger instead
+# (UptimeRobot, cron-job.org, etc.) hitting the same /health endpoint —
+# see the "Running a gig" section of DEPLOY.md. Keep this workflow as a
+# free backup, not the primary mechanism.
+#
+# Configure the target by setting the repo/org variable KEEPALIVE_URL
+# (Settings -> Secrets and variables -> Actions -> Variables) to the
+# service's base URL, e.g. https://setlist.onrender.com
+
+name: Keepalive ping
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    if: vars.KEEPALIVE_URL != ''
+    steps:
+      - name: Ping /health
+        run: curl -fsS "${{ vars.KEEPALIVE_URL }}/health"
