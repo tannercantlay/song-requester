@@ -7,6 +7,10 @@ const envSchema = z.object({
   CRYPTO_KEY: z.string().min(1),
   ADMIN_EMAIL: z.string().email(),
   API_PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.preprocess(
+    (v) => (v === "" || v === undefined ? undefined : v),
+    z.coerce.number().int().positive().optional(),
+  ),
   WEB_ORIGIN: z.string().min(1),
   SPOTIFY_CLIENT_ID: z.string().optional(),
   SPOTIFY_CLIENT_SECRET: z.string().optional(),

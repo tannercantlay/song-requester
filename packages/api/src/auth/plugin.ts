@@ -13,7 +13,13 @@ export async function registerAuth(app: FastifyInstance): Promise<void> {
   });
 
   await app.register(csrfProtection, {
-    cookieOpts: { path: "/", signed: true, httpOnly: false, sameSite: "lax" },
+    cookieOpts: {
+      path: "/",
+      signed: true,
+      httpOnly: false,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    },
   });
 }
 

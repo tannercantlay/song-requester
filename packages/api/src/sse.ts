@@ -31,6 +31,7 @@ export function subscribe(eventId: string, reply: FastifyReply): void {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
   });
 
   const send = ({ name, data }: { name: SseEventName; data: unknown }) => {
