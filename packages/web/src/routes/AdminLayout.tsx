@@ -39,6 +39,9 @@ export default function AdminLayout() {
           <NavLink to="/admin/catalog" className={navLinkClass}>
             Catalog
           </NavLink>
+          <NavLink to="/admin/print" className={navLinkClass}>
+            Print
+          </NavLink>
           <NavLink to="/admin/team" className={navLinkClass}>
             Team
           </NavLink>

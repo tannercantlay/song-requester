@@ -13,7 +13,10 @@ export function QrCard({ eventName, publicToken, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:static print:bg-transparent">
       <div className="qr-print-card flex flex-col items-center gap-4 rounded-2xl bg-white p-8 shadow-xl print:shadow-none">
         <h2 className="text-xl font-semibold text-slate-900">{eventName}</h2>
-        <QRCodeSVG value={guestUrl} size={220} />
+        {/* level Q tolerates a smudge or a creased corner where the default L
+            does not, and marginSize 4 is the quiet zone the QR spec requires —
+            without it scanners struggle against a busy background. */}
+        <QRCodeSVG value={guestUrl} size={220} level="Q" marginSize={4} />
         <p className="text-sm text-slate-500">Scan to request a song</p>
         <p className="break-all text-xs text-slate-400">{guestUrl}</p>
         <div className="flex gap-2 print:hidden">

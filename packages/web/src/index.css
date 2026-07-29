@@ -6,12 +6,143 @@ body {
   margin: 0;
 }
 
+/* ---------------------------------------------------------------------------
+   Print
+   Sizes here are in mm on purpose. A QR code has to leave the printer at a
+   physical size or it won't scan: the rule of thumb is that the code needs to
+   be at least a tenth of the distance it's read from. Table cards get read at
+   arm's length (~50cm), so 45mm is comfortable; a poster on a door read from a
+   couple of metres gets 120mm.
+   --------------------------------------------------------------------------- */
+
+.print-sheet {
+  display: grid;
+  gap: 8mm;
+  grid-template-columns: repeat(2, 1fr);
+}
+.print-sheet[data-layout="poster"] {
+  grid-template-columns: 1fr;
+}
+
+.print-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3mm;
+  padding: 8mm 6mm;
+  border: 1px dashed #cbd5e1; /* cut guide; removed when printing */
+  text-align: center;
+  color: #000;
+  background: #fff;
+}
+
+.print-card__event {
+  margin: 0;
+  font-size: 10pt;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.print-card__headline {
+  margin: 0;
+  font-size: 15pt;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.print-card__qr {
+  width: 45mm;
+}
+
+.print-card__message {
+  margin: 0;
+  max-width: 62mm;
+  font-size: 10pt;
+  line-height: 1.35;
+}
+
+.print-card__url {
+  margin: 0;
+  font-size: 7.5pt;
+  color: #475569;
+  word-break: break-all;
+}
+
+.print-sheet[data-layout="poster"] .print-card__qr {
+  width: 120mm;
+}
+.print-sheet[data-layout="poster"] .print-card__event {
+  font-size: 14pt;
+}
+.print-sheet[data-layout="poster"] .print-card__headline {
+  font-size: 30pt;
+}
+.print-sheet[data-layout="poster"] .print-card__message {
+  max-width: 150mm;
+  font-size: 14pt;
+}
+.print-sheet[data-layout="poster"] .print-card__url {
+  font-size: 10pt;
+}
+
 @media print {
-  body * {
+  @page {
+    margin: 8mm;
+  }
+
+  /* Controls and app chrome never reach paper. */
+  .no-print,
+  nav {
+    display: none !important;
+  }
+
+  .print-sheet {
+    gap: 0;
+  }
+
+  .print-card {
+    border: none;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    /* Keep true black on white regardless of the browser's "background
+       graphics" setting — contrast is what makes a QR scan. */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* The screen wrapper's padding and max-width must not survive into print:
+     its 1rem (~4.2mm) of vertical padding is on its own enough to push the
+     second row of cards past the bottom of a Letter page. */
+  .print-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  /* Sized for US Letter, the shorter of the two common papers: 279.4mm less
+     the 8mm @page margins leaves 263.4mm of printable height, so two rows
+     have to stay under ~131mm each. 126mm (252mm total) keeps ~11mm of slack
+     for driver rounding and non-zero unprintable areas. Sizing this to A4
+     instead would break the third and fourth cards onto a second sheet on
+     Letter. */
+  .print-sheet[data-layout="cards"] .print-card {
+    height: 126mm;
+  }
+  .print-sheet[data-layout="poster"] .print-card {
+    min-height: 250mm;
+  }
+
+  /* Legacy single-card QR modal on the queue page. Scoped with :has() so it
+     only isolates that card on pages where the modal is actually open —
+     unscoped, `body * { visibility: hidden }` would blank the print page. */
+  body:has(.qr-print-card) * {
     visibility: hidden;
   }
-  .qr-print-card,
-  .qr-print-card * {
+  body:has(.qr-print-card) .qr-print-card,
+  body:has(.qr-print-card) .qr-print-card * {
     visibility: visible;
   }
   .qr-print-card {
