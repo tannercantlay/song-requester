@@ -16,7 +16,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import {
+  ApiError,
   blockGuest,
+  createEvent,
   fetchAdminEvents,
   fetchAdminQueue,
   patchEvent,
@@ -30,6 +32,75 @@ import { QueueCard } from "../components/QueueCard";
 import { SortableQueueItem } from "../components/SortableQueueItem";
 import { QrCard } from "../components/QrCard";
 
+function NewEventForm({
+  onCreated,
+  onCancel,
+  autoFocus,
+}: {
+  onCreated: (id: string) => void;
+  onCancel?: () => void;
+  autoFocus?: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: (eventName: string) => createEvent(eventName),
+    onSuccess: async (created) => {
+      setName("");
+      // Refetch before selecting: the parent picks the event out of the
+      // admin-events list, so the new row has to be there first.
+      await queryClient.invalidateQueries({ queryKey: ["admin-events"] });
+      onCreated(created.id);
+    },
+  });
+
+  const trimmed = name.trim();
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (trimmed) mutation.mutate(trimmed);
+      }}
+      className="flex flex-col gap-2"
+    >
+      <div className="flex items-center gap-2">
+        <input
+          autoFocus={autoFocus}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          // Matches the API's createEventSchema: 1-120 characters.
+          maxLength={120}
+          placeholder="Event name, e.g. Friday at The Anchor"
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
+        <button
+          type="submit"
+          disabled={!trimmed || mutation.isPending}
+          className="rounded-full bg-purple-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {mutation.isPending ? "Creating…" : "Create event"}
+        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full bg-slate-200 px-3 py-2 text-sm font-medium text-slate-600"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+      {mutation.isError && (
+        <p className="text-sm text-rose-600">
+          {mutation.error instanceof ApiError ? mutation.error.message : "Could not create the event"}
+        </p>
+      )}
+    </form>
+  );
+}
+
 export default function AdminPage() {
   const queryClient = useQueryClient();
   const [eventId, setEventId] = useState<string | null>(null);
@@ -37,6 +108,7 @@ export default function AdminPage() {
   const [showQr, setShowQr] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [creatingEvent, setCreatingEvent] = useState(false);
 
   const eventsQuery = useQuery({ queryKey: ["admin-events"], queryFn: fetchAdminEvents });
 
@@ -107,8 +179,14 @@ export default function AdminPage() {
 
   if (!eventsQuery.data || eventsQuery.data.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-slate-500">No active events yet.</p>
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <h1 className="mb-1 text-2xl font-semibold text-slate-900">No events yet</h1>
+          <p className="mb-4 text-sm text-slate-500">
+            Create one to get a guest link and QR code.
+          </p>
+          <NewEventForm onCreated={setEventId} autoFocus />
+        </div>
       </div>
     );
   }
@@ -208,6 +286,13 @@ export default function AdminPage() {
             >
               Show QR
             </button>
+            <button
+              type="button"
+              onClick={() => setCreatingEvent(true)}
+              className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
+            >
+              + New event
+            </button>
             {event && (
               <button
                 type="button"
@@ -223,6 +308,18 @@ export default function AdminPage() {
           </div>
         </div>
         <p className="text-sm text-slate-400">{requests.length} in queue</p>
+        {creatingEvent && (
+          <div className="mt-3 rounded-lg border border-slate-200 p-3">
+            <NewEventForm
+              autoFocus
+              onCancel={() => setCreatingEvent(false)}
+              onCreated={(id) => {
+                setCreatingEvent(false);
+                setEventId(id);
+              }}
+            />
+          </div>
+        )}
       </header>
 
       {playing.length > 0 && (
