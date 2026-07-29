@@ -5,6 +5,10 @@ dist/
 .env.*
 !.env.example
 
-.claude/
+# Ignore local Claude state (settings, worktrees) but track shared plan files.
+# Must be `.claude/*` rather than `.claude/` — git cannot re-include a path
+# inside an excluded directory.
+.claude/*
+!.claude/plans/
 
 setlist-plan.tar.gz
