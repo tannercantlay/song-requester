@@ -109,6 +109,7 @@ export default function AdminPage() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [creatingEvent, setCreatingEvent] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
 
   const eventsQuery = useQuery({ queryKey: ["admin-events"], queryFn: fetchAdminEvents });
 
@@ -161,6 +162,17 @@ export default function AdminPage() {
     onSuccess: () => {
       setEditingName(false);
       queryClient.invalidateQueries({ queryKey: ["admin-events"] });
+    },
+  });
+
+  const endMutation = useMutation({
+    mutationFn: () => patchEvent(eventId!, { status: "ended" }),
+    onSuccess: async () => {
+      setConfirmEnd(false);
+      // The event drops out of the active list, so clear the selection and let
+      // the mount effect fall through to whichever event is now newest.
+      setEventId(null);
+      await queryClient.invalidateQueries({ queryKey: ["admin-events"] });
     },
   });
 
@@ -226,6 +238,22 @@ export default function AdminPage() {
   return (
     <div className="mx-auto min-h-screen max-w-2xl bg-white px-4 pb-12">
       <header className="sticky top-0 z-10 bg-white pb-3 pt-6">
+        {eventsQuery.data.length > 1 && (
+          <label className="mb-2 flex items-center gap-2 text-xs text-slate-400">
+            <span>Event</span>
+            <select
+              value={eventId ?? ""}
+              onChange={(e) => setEventId(e.target.value)}
+              className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700"
+            >
+              {eventsQuery.data.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="flex items-center justify-between">
           {editingName ? (
             <form
@@ -305,8 +333,42 @@ export default function AdminPage() {
                 {event.requestsPaused ? "Resume requests" : "Pause requests"}
               </button>
             )}
+            {event && !confirmEnd && (
+              <button
+                type="button"
+                onClick={() => setConfirmEnd(true)}
+                className="rounded-full px-3 py-1 text-xs font-medium text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+              >
+                End event
+              </button>
+            )}
           </div>
         </div>
+
+        {confirmEnd && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-rose-50 p-3">
+            <p className="flex-1 text-sm text-rose-800">
+              End <strong>{event?.name}</strong>? Guests scanning the QR code will see “This event
+              has ended” and can no longer request songs. The queue is kept, but this can’t be
+              undone from here.
+            </p>
+            <button
+              type="button"
+              disabled={endMutation.isPending}
+              onClick={() => endMutation.mutate()}
+              className="rounded-full bg-rose-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {endMutation.isPending ? "Ending…" : "End event"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmEnd(false)}
+              className="rounded-full bg-white px-4 py-2 text-xs font-medium text-slate-600"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
         <p className="text-sm text-slate-400">{requests.length} in queue</p>
         {creatingEvent && (
           <div className="mt-3 rounded-lg border border-slate-200 p-3">
