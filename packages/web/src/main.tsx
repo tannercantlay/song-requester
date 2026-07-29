@@ -10,6 +10,7 @@ import AdminLayout from "./routes/AdminLayout.tsx";
 import AdminPage from "./routes/AdminPage.tsx";
 import CatalogPage from "./routes/CatalogPage.tsx";
 import TeamPage from "./routes/TeamPage.tsx";
+import PrintPage from "./routes/PrintPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminPage />} />
             <Route path="catalog" element={<CatalogPage />} />
+            <Route path="print" element={<PrintPage />} />
             <Route path="team" element={<TeamPage />} />
           </Route>
         </Routes>
