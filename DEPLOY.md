@@ -105,12 +105,51 @@ of on the box.
 
 ## First admin
 
-There is no shell on Render's free tier, so create the first admin locally
-against Neon instead. `packages/api/src/scripts/create-admin.ts` imports
-`../env.js`, which parses the **whole** zod env schema at module load with
-no dotenv loader — so every required env var must be present in the shell
-or the command dies on a zod validation error before it ever touches the
-database. Dummy values are fine for everything except `DATABASE_URL`:
+Nothing creates an admin automatically. The server never inserts one — the
+only two code paths that write to the `admin` table are the CLI script below
+and the `/admin/team` page, and that page is behind auth, so it can't
+bootstrap the first account. After your first deploy the table exists but is
+empty.
+
+`ADMIN_EMAIL` in the Render dashboard does **not** create an account. It's
+required by the env schema, but it is only ever read at
+`packages/api/src/scripts/create-admin.ts:19` as the default email when you
+run the script yourself.
+
+There is no shell on Render's free tier, so this has to happen from your
+machine. Two ways; pick either.
+
+**Run this once, and never again** — the admin lives in Neon, not in the
+container. Restarts, redeploys, and image rebuilds don't touch it, and
+`dbmate` records applied versions in `schema_migrations` so migrations no-op
+after the first boot.
+
+### Order matters
+
+The `admin` table doesn't exist until migrations run, and migrations run when
+the container first boots. So either deploy first and create the admin
+afterwards (simplest — the app is live, you just can't log in yet), or apply
+migrations to Neon yourself before deploying:
+
+```bash
+dbmate --url "<neon url>" --migrations-dir db/migrations --no-dump-schema up
+```
+
+Use `dbmate` directly like that, **not** `pnpm migrate` — the root script
+omits `--no-dump-schema`, so it rewrites `db/schema.sql` from the remote
+database and leaves an unexpected diff in your working tree.
+
+Running either option before migrations exist fails with
+`relation "admin" does not exist`.
+
+### Option A — the CLI script
+
+`create-admin.ts` imports `../env.js`, which parses the **whole** zod env
+schema at module load with no dotenv loader, so every required variable must
+be present or the command dies on a validation error before it ever reaches
+the database. Dummy values are fine for everything except `DATABASE_URL`
+(`JWT_SECRET` still has to be ≥32 characters, and `ADMIN_EMAIL` a valid
+email — that's the account being created):
 
 ```bash
 DATABASE_URL="<neon url>" \
@@ -121,11 +160,50 @@ WEB_ORIGIN=https://<service>.onrender.com \
 pnpm create-admin
 ```
 
-It will prompt for a password on stdin. Note that re-running this command
-for an email that already has an admin account **resets that admin's
-password** rather than erroring
-(`packages/api/src/scripts/create-admin.ts:36-41`) — useful if you forget
-the password, but be aware it's silent about it.
+It prompts for a password on stdin (minimum 8 characters). Re-running it for
+an email that already has an account **silently resets that password**
+rather than erroring (`create-admin.ts:36-41`) — useful if you forget it,
+surprising if you don't expect it.
+
+### Option B — Neon's SQL editor
+
+Skips the environment-variable soup. Generate an argon2 hash, then insert the
+row by hand.
+
+The hash command must run from `packages/api` — `argon2` is a dependency of
+that package and pnpm won't resolve it from the repo root:
+
+```bash
+cd packages/api
+node --input-type=module -e "
+const argon2 = (await import('argon2')).default;
+console.log(await argon2.hash(process.argv[1]));
+" 'your-real-password'
+```
+
+That prints a PHC-format hash like
+`$argon2id$v=19$m=65536,t=3,p=4$7gsq+qyxzFS4TrtbuTE4iw$rxyoMXZOq...`, which is
+exactly what `argon2.verify` at `packages/api/src/routes/auth.ts:33` reads at
+login — the parameters are encoded in the string itself.
+
+Then in Neon's SQL editor:
+
+```sql
+INSERT INTO admin (email, password_hash)
+VALUES ('you@example.com', '$argon2id$v=19$m=65536,t=3,p=4$...');
+```
+
+`id` and `created_at` have defaults, so those two columns are all you need.
+Keep the hash in **single quotes** — it's full of `$` characters that a shell
+would try to expand. (Neon's editor is fine either way; this bites if you
+pipe it through `psql` from a terminal.)
+
+### After that
+
+Log in at `https://<service>.onrender.com/login`. Additional co-hosts don't
+need any of this — once you're in, `/admin/team` creates them through the UI.
+They share the same events, catalog, and queue; there are no roles, and you
+can't delete your own account or the last remaining admin.
 
 ## Spotify
 
