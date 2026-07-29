@@ -115,6 +115,12 @@ export function fetchAdminEvents(): Promise<AdminEvent[]> {
   return request("/api/events");
 }
 
+// POST /api/events returns the created event without `createdAt`, so the
+// response is narrower than the one `fetchAdminEvents` hands back.
+export function createEvent(name: string): Promise<Omit<AdminEvent, "createdAt">> {
+  return request("/api/events", { method: "POST", body: JSON.stringify({ name }) });
+}
+
 export interface QueueNote {
   requesterToken: string;
   name: string | null;
