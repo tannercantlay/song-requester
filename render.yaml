@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: setlist
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    # Do NOT raise this. Live queue updates broadcast through an in-process
+    # EventEmitter (packages/api/src/sse.ts); a second instance breaks them
+    # silently — requests just never appear on the admin queue.
+    numInstances: 1
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: COOKIE_SECRET
+        sync: false
+      - key: CRYPTO_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: SPOTIFY_REDIRECT_URI
+        sync: false
