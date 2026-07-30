@@ -39,36 +39,36 @@ function SongRow({ song }: { song: AdminSong }) {
 
   if (editing) {
     return (
-      <li className="flex items-center gap-2 border-b border-slate-100 py-2">
+      <li className="flex items-center gap-2 border-b border-ink-500 py-2">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-1/3 rounded border border-slate-200 px-2 py-1 text-sm"
+          className="w-1/3 rounded border border-ink-500 px-2 py-1 text-sm"
         />
         <input
           value={artist}
           onChange={(e) => setArtist(e.target.value)}
-          className="w-1/3 rounded border border-slate-200 px-2 py-1 text-sm"
+          className="w-1/3 rounded border border-ink-500 px-2 py-1 text-sm"
         />
         <input
           value={genre}
           onChange={(e) => setGenre(e.target.value)}
           placeholder="Genre"
           list={GENRE_DATALIST_ID}
-          className="w-1/3 rounded border border-slate-200 px-2 py-1 text-sm"
+          className="w-1/3 rounded border border-ink-500 px-2 py-1 text-sm"
         />
         <button
           type="button"
           onClick={() => saveMutation.mutate()}
           disabled={saveMutation.isPending}
-          className="rounded-full bg-purple-600 px-3 py-1 text-xs font-medium text-white"
+          className="rounded-full bg-sodium px-3 py-1 text-xs font-medium text-ink-900"
         >
           Save
         </button>
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-600"
+          className="rounded-full bg-ink-500 px-3 py-1 text-xs font-medium text-bone-dim"
         >
           Cancel
         </button>
@@ -77,19 +77,19 @@ function SongRow({ song }: { song: AdminSong }) {
   }
 
   return (
-    <li className="flex items-center justify-between gap-3 border-b border-slate-100 py-2">
+    <li className="flex items-center justify-between gap-3 border-b border-ink-500 py-2">
       <div className={`min-w-0 ${song.isActive ? "" : "opacity-40"}`}>
-        <p className="truncate font-medium text-slate-900">{song.title}</p>
-        <p className="truncate text-sm text-slate-500">
+        <p className="truncate font-medium text-bone">{song.title}</p>
+        <p className="truncate text-sm text-bone-dim">
           {song.artist}
-          {song.genre && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">{song.genre}</span>}
+          {song.genre && <span className="ml-2 rounded-full bg-ink-600 px-2 py-0.5 text-xs text-bone-dim">{song.genre}</span>}
         </p>
       </div>
       <div className="flex shrink-0 gap-2">
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
+          className="rounded-full bg-ink-600 px-3 py-1 text-xs font-medium text-bone-dim"
         >
           Edit
         </button>
@@ -97,7 +97,7 @@ function SongRow({ song }: { song: AdminSong }) {
           type="button"
           onClick={() => toggleActiveMutation.mutate()}
           disabled={toggleActiveMutation.isPending}
-          className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
+          className="rounded-full bg-ink-600 px-3 py-1 text-xs font-medium text-bone-dim"
         >
           {song.isActive ? "Hide" : "Show"}
         </button>
@@ -115,8 +115,8 @@ function FileImportSection() {
   });
 
   return (
-    <section className="mb-6 rounded-lg border border-slate-200 p-4">
-      <p className="mb-2 text-sm text-slate-500">
+    <section className="mb-6 rounded-lg border border-ink-500 p-4">
+      <p className="mb-2 text-sm text-bone-dim">
         No Spotify? Import a catalog from a CSV or Excel file — columns "Title" and "Artist" required, "Album" optional.
       </p>
       <input
@@ -128,22 +128,22 @@ function FileImportSection() {
           e.target.value = "";
         }}
         disabled={importMutation.isPending}
-        className="text-sm text-slate-600"
+        className="text-sm text-bone-dim"
       />
-      {importMutation.isPending && <p className="mt-2 text-sm text-slate-400">Importing…</p>}
+      {importMutation.isPending && <p className="mt-2 text-sm text-bone-faint">Importing…</p>}
       {importMutation.isError && (
-        <p className="mt-2 text-sm text-red-600">
+        <p className="mt-2 text-sm text-ember">
           {importMutation.error instanceof ApiError ? importMutation.error.message : "Import failed"}
         </p>
       )}
       {importMutation.isSuccess && (
         <div className="mt-2 text-sm">
-          <p className="text-green-700">
+          <p className="text-bone">
             Imported {importMutation.data.imported}, skipped {importMutation.data.skipped} duplicate
             {importMutation.data.skipped === 1 ? "" : "s"}.
           </p>
           {importMutation.data.errors.length > 0 && (
-            <ul className="mt-1 list-disc pl-5 text-amber-700">
+            <ul className="mt-1 list-disc pl-5 text-sodium">
               {importMutation.data.errors.map((err, i) => (
                 <li key={i}>{err}</li>
               ))}
@@ -181,11 +181,11 @@ function SpotifySection() {
 
   if (!meQuery.data.spotifyConnected) {
     return (
-      <section className="mb-6 rounded-lg border border-slate-200 p-4">
-        <p className="mb-2 text-sm text-slate-500">Connect Spotify to import playlists into your catalog.</p>
+      <section className="mb-6 rounded-lg border border-ink-500 p-4">
+        <p className="mb-2 text-sm text-bone-dim">Connect Spotify to import playlists into your catalog.</p>
         <a
           href="/api/spotify/connect"
-          className="inline-block rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white"
+          className="inline-block rounded-full bg-bone px-4 py-2 text-sm font-medium text-ink-900"
         >
           Connect Spotify
         </a>
@@ -194,27 +194,27 @@ function SpotifySection() {
   }
 
   return (
-    <section className="mb-6 rounded-lg border border-slate-200 p-4">
-      <p className="mb-2 text-sm text-slate-500">Spotify connected ✓</p>
+    <section className="mb-6 rounded-lg border border-ink-500 p-4">
+      <p className="mb-2 text-sm text-bone-dim">Spotify connected ✓</p>
       {playlistsQuery.isError && (
-        <p className="text-sm text-red-600">
+        <p className="text-sm text-ember">
           {playlistsQuery.error instanceof ApiError ? playlistsQuery.error.message : "Couldn't load playlists"}
         </p>
       )}
       {importMutation.isSuccess && (
-        <p className="mb-2 text-sm text-green-700">Imported {importMutation.data.imported} tracks.</p>
+        <p className="mb-2 text-sm text-bone">Imported {importMutation.data.imported} tracks.</p>
       )}
       <ul className="space-y-1">
         {playlistsQuery.data?.map((p) => (
           <li key={p.id} className="flex items-center justify-between text-sm">
             <span>
-              {p.name} <span className="text-slate-400">({p.trackCount} tracks)</span>
+              {p.name} <span className="text-bone-faint">({p.trackCount} tracks)</span>
             </span>
             <button
               type="button"
               onClick={() => importMutation.mutate(p.id)}
               disabled={importMutation.isPending}
-              className="rounded-full bg-purple-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              className="rounded-full bg-sodium px-3 py-1 text-xs font-medium text-ink-900 disabled:opacity-50"
             >
               Import
             </button>
@@ -252,7 +252,7 @@ export default function CatalogPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-12 pt-6">
-      <h1 className="mb-4 text-2xl font-semibold text-slate-900">Catalog</h1>
+      <h1 className="mb-4 text-2xl font-semibold text-bone">Catalog</h1>
 
       <datalist id={GENRE_DATALIST_ID}>
         {genresQuery.data?.map((g) => <option key={g} value={g} />)}
@@ -272,25 +272,25 @@ export default function CatalogPage() {
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           placeholder="Title"
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          className="flex-1 rounded-lg border border-ink-500 px-3 py-2 text-sm"
         />
         <input
           value={newArtist}
           onChange={(e) => setNewArtist(e.target.value)}
           placeholder="Artist"
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          className="flex-1 rounded-lg border border-ink-500 px-3 py-2 text-sm"
         />
         <input
           value={newGenre}
           onChange={(e) => setNewGenre(e.target.value)}
           placeholder="Genre (optional)"
           list={GENRE_DATALIST_ID}
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          className="flex-1 rounded-lg border border-ink-500 px-3 py-2 text-sm"
         />
         <button
           type="submit"
           disabled={addMutation.isPending}
-          className="rounded-full bg-purple-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-full bg-sodium px-4 py-2 text-sm font-medium text-ink-900 disabled:opacity-50"
         >
           Add
         </button>
@@ -301,7 +301,7 @@ export default function CatalogPage() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search catalog…"
-        className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        className="mb-3 w-full rounded-lg border border-ink-500 px-3 py-2 text-sm"
       />
 
       <ul>{songsQuery.data?.map((song) => <SongRow key={song.id} song={song} />)}</ul>

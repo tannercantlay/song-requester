@@ -41,12 +41,12 @@ export function NewEventForm({ onCreated, onCancel, autoFocus }: Props) {
           // Matches the API's createEventSchema: 1-120 characters.
           maxLength={120}
           placeholder="Event name, e.g. Friday at The Anchor"
-          className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-sm"
+          className="h-11 min-w-0 flex-1 rounded-lg border border-ink-500 px-3 text-sm"
         />
         <button
           type="submit"
           disabled={!trimmed || mutation.isPending}
-          className="h-11 rounded-full bg-purple-600 px-5 text-sm font-medium text-white disabled:opacity-50"
+          className="h-11 rounded-full bg-sodium px-5 text-sm font-medium text-ink-900 disabled:opacity-50"
         >
           {mutation.isPending ? "Creating…" : "Create event"}
         </button>
@@ -54,14 +54,14 @@ export function NewEventForm({ onCreated, onCancel, autoFocus }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="h-11 rounded-full bg-slate-200 px-4 text-sm font-medium text-slate-600"
+            className="h-11 rounded-full bg-ink-500 px-4 text-sm font-medium text-bone-dim"
           >
             Cancel
           </button>
         )}
       </div>
       {mutation.isError && (
-        <p className="text-sm text-rose-600">
+        <p className="text-sm text-ember">
           {mutation.error instanceof ApiError ? mutation.error.message : "Could not create the event"}
         </p>
       )}

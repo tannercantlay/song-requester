@@ -43,7 +43,7 @@ export default function GuestPage() {
     const status = eventQuery.error instanceof ApiError ? eventQuery.error.status : 0;
     return (
       <div className="flex min-h-screen items-center justify-center p-6 text-center">
-        <p className="text-slate-500">
+        <p className="text-bone-dim">
           {status === 410 ? "This event has ended." : "Event not found."}
         </p>
       </div>
@@ -53,17 +53,17 @@ export default function GuestPage() {
   if (eventQuery.isLoading || !eventQuery.data) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-bone-faint">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-lg bg-white px-4 pb-12">
-      <header className="sticky top-0 z-10 bg-white pb-3 pt-6">
-        <h1 className="text-2xl font-semibold text-slate-900">{eventQuery.data.name}</h1>
+    <div className="mx-auto min-h-screen max-w-lg bg-ink-700 px-4 pb-12">
+      <header className="sticky top-0 z-10 bg-ink-700 pb-3 pt-6">
+        <h1 className="text-2xl font-semibold text-bone">{eventQuery.data.name}</h1>
         {eventQuery.data.requestsPaused && (
-          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-sodium">
             Requests are paused — check back soon.
           </p>
         )}
@@ -72,14 +72,14 @@ export default function GuestPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search songs or artists…"
-          className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
+          className="mt-3 w-full rounded-lg border border-ink-500 px-3 py-2 text-sm outline-none focus:border-sodium"
         />
 
         {songsQuery.data && songsQuery.data.genres.length > 0 && (
           <select
             value={genre}
             onChange={(e) => setGenre(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
+            className="mt-2 w-full rounded-lg border border-ink-500 px-3 py-2 text-sm outline-none focus:border-sodium"
           >
             <option value="">All genres</option>
             {songsQuery.data.genres.map((g) => (
@@ -91,7 +91,7 @@ export default function GuestPage() {
         )}
 
         <details className="mt-2">
-          <summary className="cursor-pointer text-xs text-slate-400">
+          <summary className="cursor-pointer text-xs text-bone-faint">
             Add your name / a dedication (optional)
           </summary>
           <div className="mt-2 flex flex-col gap-2">
@@ -101,7 +101,7 @@ export default function GuestPage() {
               maxLength={24}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your name"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
+              className="w-full rounded-lg border border-ink-500 px-3 py-2 text-sm outline-none focus:border-sodium"
             />
             <input
               type="text"
@@ -109,13 +109,13 @@ export default function GuestPage() {
               maxLength={80}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Dedication, e.g. for the birthday girl"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400"
+              className="w-full rounded-lg border border-ink-500 px-3 py-2 text-sm outline-none focus:border-sodium"
             />
           </div>
         </details>
 
         {requestMutation.isError && (
-          <p className="mt-2 text-sm text-red-600">
+          <p className="mt-2 text-sm text-ember">
             {requestMutation.error instanceof ApiError
               ? requestMutation.error.message
               : "Something went wrong"}
@@ -140,7 +140,7 @@ export default function GuestPage() {
       </ul>
 
       {songsQuery.data?.songs.length === 0 && (
-        <p className="py-8 text-center text-slate-400">No songs match your search.</p>
+        <p className="py-8 text-center text-bone-faint">No songs match your search.</p>
       )}
     </div>
   );
