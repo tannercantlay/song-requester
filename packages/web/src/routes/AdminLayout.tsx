@@ -11,7 +11,12 @@ export default function AdminLayout() {
 
   const logoutMutation = useMutation({
     mutationFn: logout,
-    onSuccess: () => {
+    // onSettled, not onSuccess: if the request fails for any reason the user
+    // still asked to leave, and stranding them on the admin page with no
+    // feedback is the worst outcome. The cookie is httpOnly so the server is
+    // the only thing that can clear it, but landing on /login at least ends
+    // the session client-side and shows something happened.
+    onSettled: () => {
       queryClient.clear();
       window.location.href = "/login";
     },

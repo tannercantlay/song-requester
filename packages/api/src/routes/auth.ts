@@ -45,8 +45,20 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return { id: admin.id, email: admin.email };
   });
 
-  app.post("/api/auth/logout", { preHandler: requireAdmin }, async (_request, reply) => {
-    reply.clearCookie("token", { path: "/" });
+  // Deliberately NOT behind requireAdmin. Logging out is idempotent — it just
+  // clears a cookie — and gating it meant that an already-expired session got
+  // a 401, which the client surfaced as the Log out button doing nothing at
+  // all. That is the exact moment you most need it to work.
+  app.post("/api/auth/logout", async (_request, reply) => {
+    // Attributes must match the ones used at login (see setCookie above).
+    // Deletion is keyed on name/domain/path per RFC 6265, but mismatched
+    // Secure/SameSite is a well-known source of browser-specific misses.
+    reply.clearCookie("token", {
+      path: "/",
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+    });
     return reply.code(204).send();
   });
 
