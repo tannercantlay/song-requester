@@ -193,7 +193,10 @@ export function EventHeader({
 
       {confirmEnd && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-ember/40 bg-ember/10 p-3">
-          <p className="flex-1 text-sm text-bone-dim">
+          {/* Full width on a phone so the buttons wrap underneath. Sharing the
+              row squeezes this warning into a ~100px column of one-word lines,
+              which is exactly the text you don't want people skimming. */}
+          <p className="w-full text-sm text-bone-dim sm:flex-1">
             End <strong>{event.name}</strong>? Guests scanning the QR code will see “This event has
             ended” and can no longer request songs. The queue is kept, but this can’t be undone
             from here.
