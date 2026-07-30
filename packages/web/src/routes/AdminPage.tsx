@@ -16,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import {
+  ApiError,
   blockGuest,
   fetchAdminEvents,
   fetchAdminQueue,
@@ -163,6 +164,12 @@ export default function AdminPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 pb-12">
       <EventHeader
+        // Remount when the selected event changes. The header holds transient
+        // UI state — the end-event confirmation, the rename draft, the new
+        // event form — all of which is about *this* event. Without the key it
+        // survives the switch, so ending an event left the confirmation banner
+        // open and pointing at whichever event was selected next.
+        key={event.id}
         events={eventsQuery.data}
         event={event}
         onSelectEvent={setEventId}
@@ -175,6 +182,13 @@ export default function AdminPage() {
         pausing={pauseMutation.isPending}
         onEnd={() => endMutation.mutate()}
         ending={endMutation.isPending}
+        endError={
+          endMutation.isError
+            ? endMutation.error instanceof ApiError
+              ? endMutation.error.message
+              : "Could not end the event"
+            : null
+        }
       />
 
       {/* One column on a phone, two from lg up. Now Playing leads on both:

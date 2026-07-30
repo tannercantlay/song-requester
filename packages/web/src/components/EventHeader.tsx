@@ -15,6 +15,7 @@ interface Props {
   pausing: boolean;
   onEnd: () => void;
   ending: boolean;
+  endError: string | null;
 }
 
 /**
@@ -37,6 +38,7 @@ export function EventHeader({
   pausing,
   onEnd,
   ending,
+  endError,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -212,6 +214,10 @@ export function EventHeader({
           >
             Cancel
           </button>
+          {/* On failure the banner deliberately stays open so the action can be
+              retried — but it has to say why, or it reads as another button
+              that did nothing. */}
+          {endError && <p className="w-full text-sm font-medium text-rose-700">{endError}</p>}
         </div>
       )}
 
