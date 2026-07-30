@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
@@ -109,7 +109,7 @@ export default function AdminPage() {
   if (eventsQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-bone-faint">Loading…</p>
       </div>
     );
   }
@@ -118,8 +118,8 @@ export default function AdminPage() {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <h1 className="mb-1 text-2xl font-semibold text-slate-900">No events yet</h1>
-          <p className="mb-4 text-sm text-slate-500">
+          <h1 className="mb-1 text-2xl font-semibold text-bone">No events yet</h1>
+          <p className="mb-4 text-sm text-bone-dim">
             Create one to get a guest link and QR code.
           </p>
           <NewEventForm onCreated={setEventId} autoFocus />
@@ -194,8 +194,8 @@ export default function AdminPage() {
       {/* One column on a phone, two from lg up. Now Playing leads on both:
           stacked it is the first thing in view, and side by side it stays put
           while the queue scrolls independently. */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start">
-        <div className="lg:sticky lg:top-28">
+      <div className="stagger mt-5 grid gap-5 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:items-start">
+        <div style={{ "--i": 1 } as CSSProperties} className="lg:sticky lg:top-28">
           <NowPlayingPanel
             playing={playing}
             nextUp={pending[0] ?? null}
@@ -207,13 +207,16 @@ export default function AdminPage() {
           />
         </div>
 
-        <div>
+        <div style={{ "--i": 2 } as CSSProperties}>
           <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Up next {pending.length > 0 && `(${pending.length})`}
+            <h2 className="mb-3 flex items-baseline gap-2">
+              <span className="marquee-label">Up next</span>
+              {pending.length > 0 && (
+                <span className="nums text-xs text-sodium">{pending.length}</span>
+              )}
             </h2>
             {pending.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+              <p className="rounded-xl border border-dashed border-ink-500 p-8 text-center text-sm text-bone-faint">
                 No requests waiting. They'll appear here as guests scan the QR code.
               </p>
             ) : (
@@ -241,7 +244,7 @@ export default function AdminPage() {
 
           {done.length > 0 && (
             <details className="mt-4">
-              <summary className="cursor-pointer py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <summary className="marquee-label cursor-pointer py-2">
                 Played / dismissed ({done.length})
               </summary>
               <ul className="mt-2 space-y-2">

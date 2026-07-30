@@ -26,7 +26,7 @@ export function QueueCard({ request, onStatusChange, onBlock, pending, reorder }
   });
 
   return (
-    <li className="rounded-xl border border-slate-200 p-3">
+    <li className="group rounded-xl border border-ink-500 bg-ink-800/60 p-3 transition hover:border-ink-400">
       {/* Stacks on a phone: side by side, three action buttons squeeze the
           song title down to "Vale…" and the card stops being readable. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -37,7 +37,7 @@ export function QueueCard({ request, onStatusChange, onBlock, pending, reorder }
               type="button"
               disabled={!reorder.canMoveUp}
               onClick={reorder.onMoveUp}
-              className="text-slate-400 hover:text-slate-700 disabled:opacity-20"
+              className="text-bone-faint hover:text-bone disabled:opacity-20"
               aria-label="Move up"
             >
               ▲
@@ -46,7 +46,7 @@ export function QueueCard({ request, onStatusChange, onBlock, pending, reorder }
               ref={reorder.dragHandleRef}
               {...reorder.dragAttributes}
               {...reorder.dragListeners}
-              className="cursor-grab select-none px-1 text-slate-300"
+              className="cursor-grab select-none px-1 text-bone-faint"
               aria-label="Drag to reorder"
             >
               ⠿
@@ -55,7 +55,7 @@ export function QueueCard({ request, onStatusChange, onBlock, pending, reorder }
               type="button"
               disabled={!reorder.canMoveDown}
               onClick={reorder.onMoveDown}
-              className="text-slate-400 hover:text-slate-700 disabled:opacity-20"
+              className="text-bone-faint hover:text-bone disabled:opacity-20"
               aria-label="Move down"
             >
               ▼
@@ -64,10 +64,10 @@ export function QueueCard({ request, onStatusChange, onBlock, pending, reorder }
         )}
 
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-slate-900">{request.title}</p>
-          <p className="truncate text-sm text-slate-500">{request.artist}</p>
+          <p className="truncate text-[1.0625rem] font-bold leading-snug text-bone">{request.title}</p>
+          <p className="truncate text-sm text-bone-dim">{request.artist}</p>
           {request.notes.map((note, i) => (
-            <p key={i} className="mt-1 text-xs italic text-slate-400">
+            <p key={i} className="mt-1 text-xs italic text-bone-faint">
               {note.name ? `${note.name}: ` : ""}
               {note.note}
             </p>
@@ -81,15 +81,15 @@ export function QueueCard({ request, onStatusChange, onBlock, pending, reorder }
             request forward from where it is. Everything else is ghosted, so
             the eye lands on the next step instead of a row of equal colours. */}
         <div className="flex shrink-0 items-center justify-end gap-2">
-          <span className="mr-auto text-xs text-slate-400 sm:mr-0">
-            {request.voteCount} votes
+          <span className="nums mr-auto text-[0.6875rem] text-bone-faint sm:mr-0">
+            {request.voteCount}×
           </span>
           {request.status !== "playing" && request.status !== "played" && (
             <button
               type="button"
               disabled={pending}
               onClick={() => onStatusChange(request.id, "playing")}
-              className="h-11 rounded-full bg-purple-600 px-4 text-sm font-medium text-white disabled:opacity-50"
+              className="h-11 rounded-full bg-sodium px-5 text-sm font-bold text-ink-900 transition active:scale-[0.97] disabled:opacity-50"
             >
               Play
             </button>
@@ -101,8 +101,8 @@ export function QueueCard({ request, onStatusChange, onBlock, pending, reorder }
               onClick={() => onStatusChange(request.id, "played")}
               className={`h-11 rounded-full px-4 text-sm font-medium disabled:opacity-50 ${
                 request.status === "playing"
-                  ? "bg-green-600 text-white"
-                  : "border border-slate-200 text-slate-600"
+                  ? "bg-bone font-bold text-ink-900"
+                  : "border border-ink-500 text-bone-dim"
               }`}
             >
               Played
@@ -113,7 +113,7 @@ export function QueueCard({ request, onStatusChange, onBlock, pending, reorder }
               type="button"
               disabled={pending}
               onClick={() => onStatusChange(request.id, "dismissed")}
-              className="h-11 rounded-full px-4 text-sm font-medium text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+              className="h-11 rounded-full px-4 text-sm font-medium text-bone-faint hover:bg-ink-600 disabled:opacity-50"
             >
               Dismiss
             </button>
@@ -123,17 +123,17 @@ export function QueueCard({ request, onStatusChange, onBlock, pending, reorder }
 
       {guests.length > 0 && (
         <details className="mt-2">
-          <summary className="cursor-pointer text-xs text-slate-400">
+          <summary className="cursor-pointer text-xs text-bone-faint">
             Guests ({guests.length})
           </summary>
           <ul className="mt-1 space-y-1">
             {guests.map((g) => (
-              <li key={g.token} className="flex items-center justify-between text-xs text-slate-500">
+              <li key={g.token} className="flex items-center justify-between text-xs text-bone-dim">
                 <span>{g.label}</span>
                 <button
                   type="button"
                   onClick={() => onBlock(g.token)}
-                  className="text-red-500 hover:underline"
+                  className="text-ember hover:underline"
                 >
                   Block
                 </button>

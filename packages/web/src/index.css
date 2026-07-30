@@ -1,9 +1,121 @@
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/jetbrains-mono";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   "Last Call"
+   A room lit by one amber bulb. Fonts are self-hosted rather than pulled from
+   a CDN on purpose: this runs in bars, and venue wifi is the least reliable
+   dependency in the whole stack.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --ink: #0b0907;
+  --ink-700: #191512;
+  --sodium: #ffa724;
+  --bone: #f4ece1;
+  /* Fine grain, inlined so it costs no request. Without it the large dark
+     fields band visibly on cheap laptop panels. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+
+html {
+  background: var(--ink);
+}
+
 body {
   margin: 0;
+  min-height: 100vh;
+  color: var(--bone);
+  font-family: theme("fontFamily.display");
+  /* Two stage washes plus grain. The upper glow sits behind the header so the
+     page reads as lit from above rather than uniformly filled. */
+  background:
+    var(--grain),
+    radial-gradient(90rem 40rem at 50% -18rem, rgba(255, 167, 36, 0.16), transparent 62%),
+    radial-gradient(60rem 34rem at 88% 8%, rgba(255, 86, 54, 0.07), transparent 60%),
+    var(--ink);
+  background-attachment: fixed;
+}
+
+/* Form controls have to be styled at the base layer, not per call site. The
+   browser default is a white field, and Tailwind's preflight sets
+   `color: inherit` on form elements — so on a dark theme every one of the
+   ~23 inputs in this app would render near-white text on white. */
+@layer base {
+  input,
+  select,
+  textarea {
+    background-color: theme("colors.ink.800");
+    color: theme("colors.bone.DEFAULT");
+    border-color: theme("colors.ink.500");
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: theme("colors.bone.faint");
+  }
+
+  /* Visible keyboard focus in the accent colour. The default ring is a blue
+     that belongs to no part of this palette. */
+  :is(input, select, textarea, button, a, summary):focus-visible {
+    outline: 2px solid theme("colors.sodium.DEFAULT");
+    outline-offset: 2px;
+  }
+
+  /* The date/file pickers and dropdown arrows ship dark glyphs; tell the UA
+     this is a dark surface so it inverts them. */
+  input[type="file"],
+  select {
+    color-scheme: dark;
+  }
+}
+
+/* Tabular figures everywhere numbers matter — counts and vote tallies should
+   not jitter as they change. */
+.nums {
+  font-family: theme("fontFamily.mono");
+  font-variant-numeric: tabular-nums;
+}
+
+/* Small caps-ish label treatment used for every section heading. */
+.marquee-label {
+  font-family: theme("fontFamily.mono");
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: theme("colors.bone.faint");
+}
+
+/* Page-load choreography: one orchestrated reveal beats scattered fidgets.
+   Children opt in with --i to stagger. */
+.stagger > * {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Hairline of light along the top edge of raised surfaces — the cheapest way
+   to make a dark panel feel physical rather than flat. */
+.lit-edge {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 236, 210, 0.07),
+    0 18px 40px -24px rgba(0, 0, 0, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger > *,
+  [class*="animate-"] {
+    animation: none !important;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -91,6 +203,15 @@ body {
 @media print {
   @page {
     margin: 8mm;
+  }
+
+  /* The app is a dark theme; paper is not. Strip the stage wash, the grain,
+     and the warm text colour so the QR sheet prints black on white — contrast
+     is the whole reason the code scans. */
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
   }
 
   /* Controls and app chrome never reach paper. */

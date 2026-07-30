@@ -52,17 +52,18 @@ export function EventHeader({
     setMenuOpen(false);
   };
 
-  const pill = "h-11 rounded-full px-4 text-sm font-medium";
+  const pill =
+    "h-11 rounded-full px-4 text-sm font-medium transition active:scale-[0.97] disabled:opacity-50";
 
   return (
-    <header className="sticky top-0 z-10 border-b border-slate-100 bg-white pb-3 pt-4">
+    <header className="sticky top-0 z-20 -mx-4 border-b border-ink-500/70 bg-ink-900/85 px-4 pb-3 pt-4 backdrop-blur-md">
       {events.length > 1 && (
-        <label className="mb-2 flex items-center gap-2 text-xs text-slate-400">
-          <span>Event</span>
+        <label className="mb-2 flex items-center gap-2">
+          <span className="marquee-label">Event</span>
           <select
             value={event.id}
             onChange={(e) => onSelectEvent(e.target.value)}
-            className="h-9 rounded-lg border border-slate-200 px-2 text-xs text-slate-700"
+            className="nums h-9 rounded-lg border border-ink-500 bg-ink-700 px-2 text-xs text-bone"
           >
             {events.map((e) => (
               <option key={e.id} value={e.id}>
@@ -90,19 +91,19 @@ export function EventHeader({
               value={nameDraft}
               onChange={(e) => setNameDraft(e.target.value)}
               maxLength={120}
-              className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-lg font-semibold text-slate-900 outline-none focus:border-purple-400"
+              className="h-11 min-w-0 flex-1 rounded-lg border border-ink-500 px-3 text-lg font-semibold text-bone outline-none focus:border-sodium"
             />
             <button
               type="submit"
               disabled={renaming}
-              className={`${pill} bg-purple-600 text-white disabled:opacity-50`}
+              className={`${pill} bg-sodium text-ink-900 disabled:opacity-50`}
             >
               Save
             </button>
             <button
               type="button"
               onClick={() => setEditingName(false)}
-              className={`${pill} bg-slate-200 text-slate-600`}
+              className={`${pill} bg-ink-500 text-bone-dim`}
             >
               Cancel
             </button>
@@ -110,7 +111,7 @@ export function EventHeader({
         ) : (
           // Takes its own line on a phone: sharing the row with four controls
           // truncated real event names down to "Friday at…".
-          <h1 className="w-full min-w-0 truncate text-2xl font-semibold text-slate-900 sm:w-auto sm:flex-1">
+          <h1 className="w-full min-w-0 truncate text-[1.6rem] font-extrabold leading-tight tracking-tight text-bone sm:w-auto sm:flex-1">
             {event.name}
           </h1>
         )}
@@ -123,20 +124,20 @@ export function EventHeader({
               disabled={pausing}
               className={`${pill} disabled:opacity-50 ${
                 event.requestsPaused
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-slate-100 text-slate-600"
+                  ? "border border-sodium/50 bg-sodium/10 text-sodium"
+                  : "border border-ink-500 text-bone-dim hover:border-ink-400 hover:text-bone"
               }`}
             >
               {event.requestsPaused ? "Resume" : "Pause"}
             </button>
-            <button type="button" onClick={onShowQr} className={`${pill} bg-slate-100 text-slate-600`}>
+            <button type="button" onClick={onShowQr} className={`${pill} border border-ink-500 text-bone-dim hover:border-ink-400 hover:text-bone`}>
               QR
             </button>
             <button
               type="button"
               onClick={onToggleMute}
               aria-label={muted ? "Unmute chime" : "Mute chime"}
-              className="h-11 w-11 rounded-full bg-slate-100 text-slate-600"
+              className="h-11 w-11 rounded-full border border-ink-500 text-bone-dim transition hover:border-ink-400 hover:text-bone"
             >
               {muted ? "🔇" : "🔔"}
             </button>
@@ -147,7 +148,7 @@ export function EventHeader({
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-label="More actions"
                 aria-expanded={menuOpen}
-                className="h-11 w-11 rounded-full bg-slate-100 text-slate-600"
+                className="h-11 w-11 rounded-full border border-ink-500 text-bone-dim transition hover:border-ink-400 hover:text-bone"
               >
                 ⋯
               </button>
@@ -156,11 +157,11 @@ export function EventHeader({
                   {/* Full-screen backdrop so a tap anywhere dismisses the menu —
                       more forgiving than an outside-click listener on a phone. */}
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 z-20 mt-1 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                  <div className="lit-edge absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-ink-500 bg-ink-800 py-1">
                     <button
                       type="button"
                       onClick={startRename}
-                      className="block w-full px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50"
+                      className="block w-full px-4 py-3 text-left text-sm text-bone-dim transition hover:bg-ink-600 hover:text-bone"
                     >
                       Rename event
                     </button>
@@ -170,7 +171,7 @@ export function EventHeader({
                         setCreating(true);
                         setMenuOpen(false);
                       }}
-                      className="block w-full px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50"
+                      className="block w-full px-4 py-3 text-left text-sm text-bone-dim transition hover:bg-ink-600 hover:text-bone"
                     >
                       New event
                     </button>
@@ -180,7 +181,7 @@ export function EventHeader({
                         setConfirmEnd(true);
                         setMenuOpen(false);
                       }}
-                      className="block w-full border-t border-slate-100 px-4 py-3 text-left text-sm text-rose-600 hover:bg-rose-50"
+                      className="block w-full border-t border-ink-500 px-4 py-3 text-left text-sm text-ember transition hover:bg-ember/10"
                     >
                       End event
                     </button>
@@ -193,8 +194,11 @@ export function EventHeader({
       </div>
 
       {confirmEnd && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-rose-50 p-3">
-          <p className="flex-1 text-sm text-rose-800">
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-ember/40 bg-ember/10 p-3">
+          {/* Full width on a phone so the buttons wrap underneath. Sharing the
+              row squeezes this warning into a ~100px column of one-word lines,
+              which is exactly the text you don't want people skimming. */}
+          <p className="w-full text-sm text-bone-dim sm:flex-1">
             End <strong>{event.name}</strong>? Guests scanning the QR code will see “This event has
             ended” and can no longer request songs. The queue is kept, but this can’t be undone
             from here.
@@ -203,14 +207,14 @@ export function EventHeader({
             type="button"
             disabled={ending}
             onClick={onEnd}
-            className={`${pill} bg-rose-600 text-white disabled:opacity-50`}
+            className={`${pill} bg-ember text-ink-900 disabled:opacity-50`}
           >
             {ending ? "Ending…" : "End event"}
           </button>
           <button
             type="button"
             onClick={() => setConfirmEnd(false)}
-            className={`${pill} bg-white text-slate-600`}
+            className={`${pill} border border-ink-500 text-bone-dim`}
           >
             Cancel
           </button>
@@ -222,7 +226,7 @@ export function EventHeader({
       )}
 
       {creating && (
-        <div className="mt-3 rounded-xl border border-slate-200 p-3">
+        <div className="mt-3 rounded-xl border border-ink-500 p-3">
           <NewEventForm
             autoFocus
             onCancel={() => setCreating(false)}

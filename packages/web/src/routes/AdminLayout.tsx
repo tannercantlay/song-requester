@@ -3,7 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchMe, logout } from "../api/client";
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `rounded-full px-3 py-1 text-sm font-medium ${isActive ? "bg-purple-600 text-white" : "text-slate-500 hover:bg-slate-100"}`;
+  `rounded-full px-3 py-2 font-mono text-[0.7rem] uppercase tracking-marquee transition ${
+    isActive
+      ? "bg-sodium text-ink-900"
+      : "text-bone-faint hover:bg-ink-600 hover:text-bone"
+  }`;
 
 export default function AdminLayout() {
   const queryClient = useQueryClient();
@@ -25,7 +29,7 @@ export default function AdminLayout() {
   if (meQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-bone-faint">Loading…</p>
       </div>
     );
   }
@@ -35,9 +39,12 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <nav className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-        <div className="flex gap-2">
+    <div className="min-h-screen">
+      <nav className="flex flex-wrap items-center justify-between gap-2 border-b border-ink-500/70 px-4 py-3">
+        <div className="flex items-center gap-1">
+          <span className="mr-3 font-mono text-[0.7rem] uppercase tracking-marquee text-sodium">
+            Setlist
+          </span>
           <NavLink to="/admin" end className={navLinkClass}>
             Queue
           </NavLink>
@@ -51,12 +58,14 @@ export default function AdminLayout() {
             Team
           </NavLink>
         </div>
-        <div className="flex items-center gap-3 text-sm text-slate-400">
-          <span>{meQuery.data?.email}</span>
+        <div className="flex items-center gap-3">
+          <span className="hidden font-mono text-[0.7rem] text-bone-faint sm:inline">
+            {meQuery.data?.email}
+          </span>
           <button
             type="button"
             onClick={() => logoutMutation.mutate()}
-            className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600"
+            className="rounded-full border border-ink-500 px-3 py-2 font-mono text-[0.7rem] uppercase tracking-marquee text-bone-dim transition hover:border-ink-400 hover:text-bone"
           >
             Log out
           </button>
