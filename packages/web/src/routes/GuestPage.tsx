@@ -78,7 +78,7 @@ export default function GuestPage() {
         <h1 className="text-[1.6rem] font-extrabold leading-tight tracking-tight text-bone">
           {eventQuery.data.name}
         </h1>
-        <p className="marquee-label mt-1">Pick a song, we\u2019ll play it</p>
+        <p className="marquee-label mt-1">Pick a song, we’ll play it</p>
         {eventQuery.data.requestsPaused && (
           <p className="mt-2 rounded-lg border border-sodium/40 bg-sodium/10 px-3 py-2 text-sm text-sodium">
             Requests are paused — check back soon.
@@ -183,7 +183,7 @@ export default function GuestPage() {
 
       {songsQuery.data?.songs.length === 0 && (
         <p className="py-10 text-center text-sm text-bone-faint">
-          Nothing matches {search ? `\u201c${search}\u201d` : "that filter"}.
+          Nothing matches {search ? `“${search}”` : "that filter"}.
         </p>
       )}
     </div>
