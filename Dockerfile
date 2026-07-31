@@ -23,9 +23,10 @@ RUN pnpm -r build
 
 FROM node:22-bookworm-slim
 
-ARG TARGETARCH
-ADD https://github.com/amacneil/dbmate/releases/download/v2.34.1/dbmate-linux-${TARGETARCH} /usr/local/bin/dbmate
-RUN chmod +x /usr/local/bin/dbmate
+# No dbmate binary here any more. Migrations run through node-postgres, the
+# same driver the app uses — dbmate's lib/pq could not talk to Neon (see
+# docker-entrypoint.sh). That also drops the release download, the
+# architecture juggling it needed, and a whole second driver from the image.
 
 WORKDIR /app
 
