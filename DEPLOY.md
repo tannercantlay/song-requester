@@ -18,14 +18,16 @@ assumes no prior context — follow it top to bottom.
    ```
    postgres://<user>:<password>@<project>.neon.tech/setlist?sslmode=require
    ```
-   Neon's dashboard usually appends `&channel_binding=require` as well. You
-   can leave it — `docker-entrypoint.sh` strips it before running migrations
-   — but it is worth knowing why. The app's driver (node-postgres) ignores
-   the parameter, while `dbmate` is built on `lib/pq`, which forwards unknown
-   query params to the server, and Postgres rejects it:
-   `pq: unrecognized configuration parameter "channel_binding"`. Before the
-   entrypoint sanitized it, that surfaced as 60 seconds of "Waiting for
-   database..." followed by a crash-loop that looked like a network fault.
+   Neon's dashboard usually appends `&channel_binding=require` as well.
+   Leave it exactly as Neon gives it to you — paste the whole string. Both
+   the app and the migration runner use node-postgres, which ignores the
+   parameter.
+
+   (This used to matter. Migrations ran on `dbmate`, whose Go driver forwards
+   unknown query params to the server, so Neon's default string produced
+   `pq: unrecognized configuration parameter "channel_binding"` — and once
+   that was worked around, `pq: invalid input syntax for type uuid` at boot.
+   Migrations now run on the same driver as the app, so neither happens.)
 
 You do **not** need to run migrations yourself. `docker-entrypoint.sh`
 applies them on every boot, before the server starts — see the deploy log for
@@ -121,7 +123,7 @@ machine. Two ways; pick either.
 
 **Run this once, and never again** — the admin lives in Neon, not in the
 container. Restarts, redeploys, and image rebuilds don't touch it, and
-`dbmate` records applied versions in `schema_migrations` so migrations no-op
+applied versions are recorded in `schema_migrations`, so migrations no-op
 after the first boot.
 
 ### Order matters
@@ -132,12 +134,16 @@ afterwards (simplest — the app is live, you just can't log in yet), or apply
 migrations to Neon yourself before deploying:
 
 ```bash
-dbmate --url "<neon url>" --migrations-dir db/migrations --no-dump-schema up
+DATABASE_URL="<neon url>" node packages/api/dist/scripts/migrate.js
 ```
 
-Use `dbmate` directly like that, **not** `pnpm migrate` — the root script
-omits `--no-dump-schema`, so it rewrites `db/schema.sql` from the remote
-database and leaves an unexpected diff in your working tree.
+That is the same runner the container executes on boot, so it can't disagree
+with it. Build first (`pnpm -r build`) if `dist/` isn't there.
+
+Avoid `pnpm migrate` against Neon: it shells out to `dbmate`, which is fine
+locally but is the thing that could not talk to Neon in the first place, and
+the root script also omits `--no-dump-schema` so it rewrites `db/schema.sql`
+from the remote database and leaves an unexpected diff in your tree.
 
 Running either option before migrations exist fails with
 `relation "admin" does not exist`.
