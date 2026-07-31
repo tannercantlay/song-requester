@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, fetchEventPublic, fetchGuestSongs, postSongRequest } from "../api/client";
+import {
+  ApiError,
+  fetchEventPublic,
+  fetchGuestSongs,
+  postSongRequest,
+  type GuestSongSort,
+} from "../api/client";
 import { getGuestToken } from "../lib/guestToken";
+import { useDebounced } from "../lib/useDebounced";
 import { SongRow } from "../components/SongRow";
 
 export default function GuestPage() {
   const { token = "" } = useParams();
   const [search, setSearch] = useState("");
   const [genre, setGenre] = useState("");
+  const [sort, setSort] = useState<GuestSongSort>("title");
+  // The input stays instant; only the request waits for a pause in typing.
+  const debouncedSearch = useDebounced(search);
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const queryClient = useQueryClient();
@@ -21,9 +31,13 @@ export default function GuestPage() {
   });
 
   const songsQuery = useQuery({
-    queryKey: ["songs", token, search, genre],
-    queryFn: () => fetchGuestSongs(token, search, genre || undefined),
+    queryKey: ["songs", token, debouncedSearch, genre, sort],
+    queryFn: () => fetchGuestSongs(token, debouncedSearch, genre || undefined, sort),
     enabled: eventQuery.isSuccess,
+    // Keep the previous list on screen while the next one loads. Without this
+    // the list empties and re-fills on every keystroke and every sort toggle,
+    // which reads as flickering rather than filtering.
+    placeholderData: (prev) => prev,
   });
 
   const requestMutation = useMutation({
@@ -61,9 +75,12 @@ export default function GuestPage() {
   return (
     <div className="mx-auto min-h-screen max-w-lg bg-ink-700 px-4 pb-12">
       <header className="sticky top-0 z-10 bg-ink-700 pb-3 pt-6">
-        <h1 className="text-2xl font-semibold text-bone">{eventQuery.data.name}</h1>
+        <h1 className="text-[1.6rem] font-extrabold leading-tight tracking-tight text-bone">
+          {eventQuery.data.name}
+        </h1>
+        <p className="marquee-label mt-1">Pick a song, we\u2019ll play it</p>
         {eventQuery.data.requestsPaused && (
-          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-sodium">
+          <p className="mt-2 rounded-lg border border-sodium/40 bg-sodium/10 px-3 py-2 text-sm text-sodium">
             Requests are paused — check back soon.
           </p>
         )}
@@ -89,6 +106,31 @@ export default function GuestPage() {
             ))}
           </select>
         )}
+
+        {/* Segmented rather than a <select>: two options, and a thumb can hit
+            either without opening a native picker over the song list. */}
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <div className="flex rounded-full border border-ink-500 p-0.5">
+            {(["title", "artist"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setSort(option)}
+                aria-pressed={sort === option}
+                className={`rounded-full px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-marquee transition ${
+                  sort === option ? "bg-sodium text-ink-900" : "text-bone-faint hover:text-bone"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          {songsQuery.data && (
+            <span className="nums text-[0.65rem] text-bone-faint">
+              {songsQuery.data.songs.length} songs
+            </span>
+          )}
+        </div>
 
         <details className="mt-2">
           <summary className="cursor-pointer text-xs text-bone-faint">
@@ -140,7 +182,9 @@ export default function GuestPage() {
       </ul>
 
       {songsQuery.data?.songs.length === 0 && (
-        <p className="py-8 text-center text-bone-faint">No songs match your search.</p>
+        <p className="py-10 text-center text-sm text-bone-faint">
+          Nothing matches {search ? `\u201c${search}\u201d` : "that filter"}.
+        </p>
       )}
     </div>
   );

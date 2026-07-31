@@ -23,9 +23,20 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/api/e/:token/songs", async (request) => {
     const { token } = request.params as { token: string };
-    const { search, genre } = request.query as { search?: string; genre?: string };
+    const { search, genre, sort } = request.query as {
+      search?: string;
+      genre?: string;
+      sort?: string;
+    };
+    // Whitelisted rather than passed through: this value reaches an ORDER BY,
+    // and an unrecognised one silently falls back to title instead of erroring
+    // at a guest who did nothing wrong.
+    const sortBy = sort === "artist" ? "artist" : "title";
     const event = await getActiveEventByToken(token);
-    const [songs, genres] = await Promise.all([getGuestSongs(event.id, search, genre), listGenres()]);
+    const [songs, genres] = await Promise.all([
+      getGuestSongs(event.id, search, genre, sortBy),
+      listGenres(),
+    ]);
     return { requestsPaused: event.requests_paused, songs, genres };
   });
 
