@@ -21,7 +21,14 @@ export interface GuestSong {
   voteCount: number;
 }
 
-export async function getGuestSongs(eventId: string, search?: string, genre?: string): Promise<GuestSong[]> {
+export type GuestSongSort = "title" | "artist";
+
+export async function getGuestSongs(
+  eventId: string,
+  search?: string,
+  genre?: string,
+  sort: GuestSongSort = "title",
+): Promise<GuestSong[]> {
   let query = db
     .selectFrom("song")
     .leftJoin("request", (join) =>
@@ -39,7 +46,18 @@ export async function getGuestSongs(eventId: string, search?: string, genre?: st
       sql<GuestSongStatus>`coalesce(request.status, 'none')`.as("status"),
       sql<number>`coalesce(request.vote_count, 0)`.as("voteCount"),
     ])
-    .orderBy("song.title", "asc");
+    // Secondary sort matters as much as the primary: grouping by artist is
+    // useless if that artist's songs then come back in arbitrary order.
+    // lower() so "ABBA" and "Abba" don't end up in separate blocks — Postgres
+    // collations vary on case, and the catalog is hand-entered.
+    .orderBy(
+      sort === "artist" ? sql`lower(song.artist)` : sql`lower(song.title)`,
+      "asc",
+    )
+    .orderBy(
+      sort === "artist" ? sql`lower(song.title)` : sql`lower(song.artist)`,
+      "asc",
+    );
 
   if (search) {
     query = query.where((eb) =>

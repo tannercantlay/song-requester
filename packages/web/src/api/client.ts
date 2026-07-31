@@ -83,14 +83,18 @@ export function fetchEventPublic(token: string): Promise<EventPublic> {
   return request(`/api/e/${token}`);
 }
 
+export type GuestSongSort = "title" | "artist";
+
 export function fetchGuestSongs(
   token: string,
   search: string,
   genre?: string,
+  sort?: GuestSongSort,
 ): Promise<{ requestsPaused: boolean; songs: GuestSong[]; genres: string[] }> {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (genre) params.set("genre", genre);
+  if (sort && sort !== "title") params.set("sort", sort);
   const qs = params.toString() ? `?${params.toString()}` : "";
   return request(`/api/e/${token}/songs${qs}`);
 }
