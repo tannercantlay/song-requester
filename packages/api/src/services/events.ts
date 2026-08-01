@@ -58,6 +58,23 @@ export async function patchEvent(
   return updated;
 }
 
+/**
+ * Removes every request for an event, returning it to a fresh queue while
+ * keeping the event itself — same id, same public token, so printed QR codes
+ * and table cards stay valid for the next night.
+ *
+ * request_vote cascades from request (0001_initial_schema), so the votes go
+ * with them. blocked_guest hangs off event rather than request and is left
+ * alone: someone barred from requesting should stay barred after a tidy-up.
+ */
+export async function clearQueue(eventId: string): Promise<number> {
+  await getEventById(eventId);
+
+  const result = await db.deleteFrom("request").where("event_id", "=", eventId).executeTakeFirst();
+
+  return Number(result.numDeletedRows ?? 0);
+}
+
 export async function reorderQueue(eventId: string, order: string[]): Promise<void> {
   await getEventById(eventId);
 

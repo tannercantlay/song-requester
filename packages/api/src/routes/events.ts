@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAdmin } from "../auth/requireAdmin.js";
 import {
   blockGuest,
+  clearQueue,
   createEvent,
   getEventById,
   listActiveEvents,
@@ -89,6 +90,22 @@ export async function eventsRoutes(app: FastifyInstance): Promise<void> {
       throw err;
     }
     return getQueue(id);
+  });
+
+  app.delete("/api/events/:id/requests", { preHandler: app.csrfProtection }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    try {
+      const cleared = await clearQueue(id);
+      // Same event name the reorder path uses: from a client's point of view
+      // the queue changed wholesale, which is all it needs to know to refetch.
+      broadcast(id, "queue.reordered", { cleared });
+      return { cleared };
+    } catch (err) {
+      if (err instanceof HttpError) {
+        return reply.code(err.status).send({ error: err.message });
+      }
+      throw err;
+    }
   });
 
   app.post("/api/events/:id/reorder", { preHandler: app.csrfProtection }, async (request, reply) => {

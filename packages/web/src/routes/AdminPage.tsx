@@ -18,6 +18,7 @@ import {
 import {
   ApiError,
   blockGuest,
+  clearQueue,
   fetchAdminEvents,
   fetchAdminQueue,
   patchEvent,
@@ -99,6 +100,11 @@ export default function AdminPage() {
       setEventId(null);
       await queryClient.invalidateQueries({ queryKey: ["admin-events"] });
     },
+  });
+
+  const clearMutation = useMutation({
+    mutationFn: () => clearQueue(eventId!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-queue", eventId] }),
   });
 
   const sensors = useSensors(
@@ -189,6 +195,16 @@ export default function AdminPage() {
               : "Could not end the event"
             : null
         }
+        onClearQueue={() => clearMutation.mutate()}
+        clearing={clearMutation.isPending}
+        clearError={
+          clearMutation.isError
+            ? clearMutation.error instanceof ApiError
+              ? clearMutation.error.message
+              : "Could not clear the queue"
+            : null
+        }
+        queueCount={requests.length}
       />
 
       {/* One column on a phone, two from lg up. Now Playing leads on both:
