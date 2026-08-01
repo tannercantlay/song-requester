@@ -16,6 +16,10 @@ interface Props {
   onEnd: () => void;
   ending: boolean;
   endError: string | null;
+  onClearQueue: () => void;
+  clearing: boolean;
+  clearError: string | null;
+  queueCount: number;
 }
 
 /**
@@ -39,12 +43,16 @@ export function EventHeader({
   onEnd,
   ending,
   endError,
+  onClearQueue,
+  clearing,
+  clearError,
+  queueCount,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [creating, setCreating] = useState(false);
-  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [confirm, setConfirm] = useState<"end" | "clear" | null>(null);
 
   const startRename = () => {
     setNameDraft(event.name);
@@ -177,8 +185,19 @@ export function EventHeader({
                     </button>
                     <button
                       type="button"
+                      disabled={queueCount === 0}
                       onClick={() => {
-                        setConfirmEnd(true);
+                        setConfirm("clear");
+                        setMenuOpen(false);
+                      }}
+                      className="block w-full border-t border-ink-500 px-4 py-3 text-left text-sm text-bone-dim transition hover:bg-ink-600 hover:text-bone disabled:opacity-40 disabled:hover:bg-transparent"
+                    >
+                      Clear queue{queueCount > 0 ? ` (${queueCount})` : ""}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirm("end");
                         setMenuOpen(false);
                       }}
                       className="block w-full border-t border-ink-500 px-4 py-3 text-left text-sm text-ember transition hover:bg-ember/10"
@@ -193,7 +212,7 @@ export function EventHeader({
         )}
       </div>
 
-      {confirmEnd && (
+      {confirm === "end" && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-ember/40 bg-ember/10 p-3">
           {/* Full width on a phone so the buttons wrap underneath. Sharing the
               row squeezes this warning into a ~100px column of one-word lines,
@@ -213,7 +232,7 @@ export function EventHeader({
           </button>
           <button
             type="button"
-            onClick={() => setConfirmEnd(false)}
+            onClick={() => setConfirm(null)}
             className={`${pill} border border-ink-500 text-bone-dim`}
           >
             Cancel
@@ -222,6 +241,33 @@ export function EventHeader({
               retried — but it has to say why, or it reads as another button
               that did nothing. */}
           {endError && <p className="w-full text-sm font-medium text-rose-700">{endError}</p>}
+        </div>
+      )}
+
+      {confirm === "clear" && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-ember/40 bg-ember/10 p-3">
+          <p className="w-full text-sm text-bone-dim sm:flex-1">
+            Delete all <strong>{queueCount}</strong> request{queueCount === 1 ? "" : "s"} for{" "}
+            <strong>{event.name}</strong>, including played history? The event, its guest link and
+            its QR codes all stay valid — this just empties the queue for a fresh night. Blocked
+            guests stay blocked. This can’t be undone.
+          </p>
+          <button
+            type="button"
+            disabled={clearing}
+            onClick={onClearQueue}
+            className={`${pill} bg-ember text-ink-900 disabled:opacity-50`}
+          >
+            {clearing ? "Clearing…" : "Clear queue"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirm(null)}
+            className={`${pill} border border-ink-500 text-bone-dim`}
+          >
+            Cancel
+          </button>
+          {clearError && <p className="w-full text-sm font-medium text-ember">{clearError}</p>}
         </div>
       )}
 

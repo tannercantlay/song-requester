@@ -178,6 +178,10 @@ export function reorderQueue(eventId: string, order: string[]): Promise<QueueReq
   });
 }
 
+export function clearQueue(eventId: string): Promise<{ cleared: number }> {
+  return request(`/api/events/${eventId}/requests`, { method: "DELETE" });
+}
+
 export function blockGuest(eventId: string, requesterToken: string): Promise<void> {
   return request(`/api/events/${eventId}/block`, {
     method: "POST",
