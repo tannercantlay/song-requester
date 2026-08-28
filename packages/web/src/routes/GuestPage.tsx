@@ -16,7 +16,9 @@ export default function GuestPage() {
   const { token = "" } = useParams();
   const [search, setSearch] = useState("");
   const [genre, setGenre] = useState("");
-  const [sort, setSort] = useState<GuestSongSort>("title");
+  // Artist-first: people scan for a band they like, not a title they
+  // already know. The toggle is still there for title order.
+  const [sort, setSort] = useState<GuestSongSort>("artist");
   // The input stays instant; only the request waits for a pause in typing.
   const debouncedSearch = useDebounced(search);
   const [name, setName] = useState("");
@@ -32,7 +34,8 @@ export default function GuestPage() {
 
   const songsQuery = useQuery({
     queryKey: ["songs", token, debouncedSearch, genre, sort],
-    queryFn: () => fetchGuestSongs(token, debouncedSearch, genre || undefined, sort),
+    queryFn: () =>
+      fetchGuestSongs(token, debouncedSearch, genre || undefined, sort, guestToken),
     enabled: eventQuery.isSuccess,
     // Keep the previous list on screen while the next one loads. Without this
     // the list empties and re-fills on every keystroke and every sort toggle,
@@ -110,20 +113,23 @@ export default function GuestPage() {
         {/* Segmented rather than a <select>: two options, and a thumb can hit
             either without opening a native picker over the song list. */}
         <div className="mt-2 flex items-center justify-between gap-3">
-          <div className="flex rounded-full border border-ink-500 p-0.5">
-            {(["title", "artist"] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setSort(option)}
-                aria-pressed={sort === option}
-                className={`rounded-full px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-marquee transition ${
-                  sort === option ? "bg-sodium text-ink-900" : "text-bone-faint hover:text-bone"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <span className="marquee-label">Sort</span>
+            <div className="flex rounded-full border border-ink-500 p-0.5">
+              {(["artist", "title"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setSort(option)}
+                  aria-pressed={sort === option}
+                  className={`rounded-full px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-marquee transition ${
+                    sort === option ? "bg-sodium text-ink-900" : "text-bone-faint hover:text-bone"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
           </div>
           {songsQuery.data && (
             <span className="nums text-[0.65rem] text-bone-faint">

@@ -77,6 +77,8 @@ export interface GuestSong {
   genre: string | null;
   status: GuestSongStatus;
   voteCount: number;
+  /** Whether *this* guest requested it — never whether anyone else did. */
+  requestedByYou: boolean;
 }
 
 export function fetchEventPublic(token: string): Promise<EventPublic> {
@@ -90,13 +92,19 @@ export function fetchGuestSongs(
   search: string,
   genre?: string,
   sort?: GuestSongSort,
+  requesterToken?: string,
 ): Promise<{ requestsPaused: boolean; songs: GuestSong[]; genres: string[] }> {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (genre) params.set("genre", genre);
-  if (sort && sort !== "title") params.set("sort", sort);
+  // Always sent when known, rather than omitting whichever value happens to
+  // match the server default — that coupling breaks quietly if the default moves.
+  if (sort) params.set("sort", sort);
   const qs = params.toString() ? `?${params.toString()}` : "";
-  return request(`/api/e/${token}/songs${qs}`);
+  // Header, not query param: keeps the guest's token out of request logs.
+  return request(`/api/e/${token}/songs${qs}`, {
+    headers: requesterToken ? { "x-requester-token": requesterToken } : undefined,
+  });
 }
 
 export function postSongRequest(

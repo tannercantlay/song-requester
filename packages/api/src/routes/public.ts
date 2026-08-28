@@ -29,12 +29,22 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
       sort?: string;
     };
     // Whitelisted rather than passed through: this value reaches an ORDER BY,
-    // and an unrecognised one silently falls back to title instead of erroring
-    // at a guest who did nothing wrong.
-    const sortBy = sort === "artist" ? "artist" : "title";
+    // and an unrecognised one falls back to the default instead of erroring at
+    // a guest who did nothing wrong.
+    const sortBy = sort === "title" ? "title" : "artist";
+
+    // Sent as a header rather than a query param so the guest's token stays
+    // out of request logs — Fastify logs req.url on every request. It only
+    // marks a guest's own requests, so anything unusable is simply ignored.
+    const rawToken = request.headers["x-requester-token"];
+    const requesterToken =
+      typeof rawToken === "string" && rawToken.length >= 8 && rawToken.length <= 128
+        ? rawToken
+        : undefined;
+
     const event = await getActiveEventByToken(token);
     const [songs, genres] = await Promise.all([
-      getGuestSongs(event.id, search, genre, sortBy),
+      getGuestSongs(event.id, search, genre, sortBy, requesterToken),
       listGenres(),
     ]);
     return { requestsPaused: event.requests_paused, songs, genres };
