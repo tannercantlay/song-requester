@@ -19,6 +19,12 @@ export interface GuestSong {
   genre: string | null;
   status: GuestSongStatus;
   voteCount: number;
+  /**
+   * Whether *this* guest requested the song, not whether anyone did. Guests
+   * are shown their own requests and nothing about anyone else's — see the
+   * comment on the `requestedByYou` select below.
+   */
+  requestedByYou: boolean;
 }
 
 export type GuestSongSort = "title" | "artist";
@@ -27,7 +33,10 @@ export async function getGuestSongs(
   eventId: string,
   search?: string,
   genre?: string,
-  sort: GuestSongSort = "title",
+  // Artist-first: people scan a setlist looking for a band they like, not a
+  // title they already know.
+  sort: GuestSongSort = "artist",
+  requesterToken?: string,
 ): Promise<GuestSong[]> {
   let query = db
     .selectFrom("song")
@@ -45,6 +54,16 @@ export async function getGuestSongs(
       "song.genre as genre",
       sql<GuestSongStatus>`coalesce(request.status, 'none')`.as("status"),
       sql<number>`coalesce(request.vote_count, 0)`.as("voteCount"),
+      // Scoped to this guest on purpose. A shared "someone requested this"
+      // state made the row look spent, so guests skipped songs they wanted
+      // instead of adding to them. request_vote is UNIQUE (request_id,
+      // requester_token), so this is a plain existence check. A missing token
+      // binds as NULL, which never matches — so it degrades to false.
+      sql<boolean>`exists (
+        select 1 from request_vote rv
+        where rv.request_id = request.id
+          and rv.requester_token = ${requesterToken ?? null}
+      )`.as("requestedByYou"),
     ])
     // Secondary sort matters as much as the primary: grouping by artist is
     // useless if that artist's songs then come back in arbitrary order.
